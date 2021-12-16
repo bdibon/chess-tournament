@@ -1,0 +1,1 @@
+"""This module handles the operations with the database."""
