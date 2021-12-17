@@ -1,36 +1,56 @@
 """This module provides the Player class."""
 
-from datetime import date
-from typing import Union
+from collections.abc import Mapping
 
-SEXES = ['male', 'female']
+from datetime import datetime
+from typing import Optional
+
+SEXES = {'m': 'male', 'f': 'female'}
 
 
-class Player:
+class PlayerException(Exception):
+    """The player module raises this when the module is misused."""
+
+    def __init__(self, message: str, field: str = '') -> None:
+        """
+        Args
+            message (str): description of the error
+            field (str): name of the attribute involved
+        """
+        self.message = message
+        self.field = field
+        super().__init__(self.message)
+
+
+class Player(Mapping):
     def __init__(self,
                  first_name: str,
                  last_name: str,
-                 birth_date: Union[date, str],
+                 birth_date: str,
                  sex: str,
-                 elo: int) -> None:
-        self._first_name = first_name
-        self._last_name = last_name
-        self._sex = sex
+                 elo: int,
+                 id: Optional[int] = None) -> None:
+        self.first_name = first_name
+        self.last_name = last_name
+        self.birth_date = birth_date
+        self.sex = sex
         self.elo = elo
 
-        if isinstance(birth_date, date):
-            self._birth_date = birth_date
-        else:
-            self._birth_date = date.fromisoformat(birth_date)
+        self.id = id
+
+    def __len__(self):
+        return len(self.__dict__)
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+    def __iter__(self):
+        return iter(key.lstrip('_') for key in self.__dict__)
 
     def __str__(self):
-        return str({
-            'first_name': self._first_name,
-            'last_name': self._last_name,
-            'birth_date': str(self._birth_date),
-            'sex': self._sex,
-            'elo': self._elo,
-        })
+        dict_representation = {key.lstrip('_'): value for key, value in self.__dict__.items()}
+        dict_representation['birth_date'] = str(dict_representation['birth_date'])
+        return str(dict_representation)
 
     def __repr__(self):
         return f"{self.__class__.__name__}" \
@@ -40,17 +60,44 @@ class Player:
     def first_name(self):
         return self._first_name
 
+    @first_name.setter
+    def first_name(self, value):
+        self._first_name = value.capitalize()
+
     @property
     def last_name(self):
         return self._last_name
+
+    @last_name.setter
+    def last_name(self, value):
+        self._last_name = value.upper()
 
     @property
     def birth_date(self):
         return self._birth_date
 
+    @birth_date.setter
+    def birth_date(self, value):
+        try:
+            datetime.strptime(value, "%Y-%m-%d")
+            self._birth_date = value
+        except Exception:
+            raise PlayerException("Player's date of birth must be in the YYYY-MM-DD format.", field='birth_date')
+
     @property
     def sex(self) -> str:
         return self._sex
+
+    @sex.setter
+    def sex(self, value):
+        value = value.lower()
+
+        if len(value) == 1 and value in SEXES:
+            self._sex = SEXES[value]
+        elif value in SEXES.values():
+            self._sex = value
+        else:
+            raise PlayerException(f"Invalid sex value ({value}) for Player.", field='sex')
 
     @property
     def elo(self) -> int:
@@ -59,7 +106,7 @@ class Player:
     @elo.setter
     def elo(self, value: int):
         if value < 100:
-            raise ValueError("Elo rating cannot be below 100.")
+            raise PlayerException("Elo rating cannot be below 100.", field='elo')
         self._elo = value
 
 
@@ -67,7 +114,7 @@ class TournamentPlayer(Player):
     def __init__(self,
                  first_name: str,
                  last_name: str,
-                 birth_date: date,
+                 birth_date: str,
                  sex: str,
                  elo: int,
                  previous_opponents: list,
@@ -79,18 +126,6 @@ class TournamentPlayer(Player):
                          elo)
         self._score = score
         self._previous_opponents = previous_opponents
-
-    def __str__(self):
-        return str({
-            'first_name': self._first_name,
-            'last_name': self._last_name,
-            'birth_date': str(self._birth_date),
-            'sex': self._sex,
-            'elo': self._elo,
-            'score': self._score,
-            'previous_opponents': self._previous_opponents
-
-        })
 
     def __repr__(self):
         return f"{self.__class__.__name__}" \
