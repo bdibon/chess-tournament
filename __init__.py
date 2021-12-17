@@ -1,1 +1,0 @@
-"""This is the top level package for chess-tournament."""
