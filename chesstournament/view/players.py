@@ -3,7 +3,7 @@ from typing import List
 import typer
 from tabulate import tabulate
 
-from chesstournament import config, __app_name__
+from chesstournament import config, __app_name__, ERRORS, DB_READ_ERROR, DB_WRITE_ERROR
 from ..controller.players import PlayersManager, PlayerSort, sort_players
 from ..model.player import Player, PlayerException
 
@@ -33,7 +33,7 @@ def add():
         )
         print_players([player])
     except (PlayerException, Exception) as error:
-        error_message = error.message if isinstance(error, PlayerException) else error.args[0]
+        error_message = error.message if isinstance(error, PlayerException) else ERRORS[DB_WRITE_ERROR]
         typer.secho(
             f'\nPlayer was not created:\n{error_message}',
             fg=typer.colors.RED,
@@ -42,8 +42,8 @@ def add():
         raise typer.Exit(1)
 
 
-@app.command()
-def list(
+@app.command("list")
+def list_players(
         sort_alpha: bool = typer.Option(
             False,
             "--sort-alpha",
@@ -71,7 +71,7 @@ def list(
         sort_players(saved_players, sort_flag)
         print_players(saved_players)
     except (PlayerException, Exception) as error:
-        error_message = error.message if isinstance(error, PlayerException) else error.args[0]
+        error_message = error.message if isinstance(error, PlayerException) else ERRORS[DB_READ_ERROR]
         typer.secho(
             f'\nCould not retrieve saved players:\n{error_message}',
             fg=typer.colors.RED,
@@ -80,17 +80,39 @@ def list(
         raise typer.Exit(1)
 
 
-@app.command
-def udpate(
-        id: int = typer.Option(
+@app.command()
+def update(
+        player_id: int = typer.Option(
             ...,
+            "--id",
             help="The 'id' of the player to update."
         ),
-        rank: int = typer.Option(
+        elo: int = typer.Option(
             ...,
-            help="The new rank of the player."
+            help="The new Elo rating of the player."
         )):
-    pass
+    """Update a player in the local database."""
+    try:
+        players_manager = get_players_manager()
+        player = players_manager.get_by_id(player_id)
+        old_elo = player.elo
+        player.elo = elo
+        players_manager.update_one(player)
+        typer.secho(
+            f"\nPlayer with id {player_id} ({player.first_name} {player.last_name}) was successfully updated."
+            f"\nHis/Her Elo rank went from {old_elo} to {player.elo}.",
+            fg=typer.colors.GREEN,
+        )
+        print_players([player])
+    except (PlayerException, Exception) as error:
+        error_message = error.message if isinstance(error, PlayerException) else ERRORS[DB_WRITE_ERROR]
+        typer.secho(
+            f'\nCould not update player with id: {player_id}:\n{error_message}',
+            fg=typer.colors.RED,
+            err=True
+        )
+        raise typer.Exit(1)
+
 
 def print_players(players: List[Player]):
     """Print a list of players to stdout."""
