@@ -54,7 +54,7 @@ class Player(Mapping):
 
     def __repr__(self):
         return f"{self.__class__.__name__}" \
-               f"({self._first_name}, {self._last_name}, {str(self._birth_date)}, {self._sex}, {self._elo})"
+               f"({self._first_name}, {self._last_name}, {self._birth_date}, {self._sex}, {self._elo})"
 
     @property
     def first_name(self):
@@ -82,7 +82,7 @@ class Player(Mapping):
             datetime.strptime(value, "%Y-%m-%d")
             self._birth_date = value
         except Exception:
-            raise PlayerException("Player's date of birth must be in the YYYY-MM-DD format.", field='birth_date')
+            raise PlayerException("Player's date of birth must be in the YYYY-MM-DD format.")
 
     @property
     def sex(self) -> str:
@@ -97,7 +97,7 @@ class Player(Mapping):
         elif value in SEXES.values():
             self._sex = value
         else:
-            raise PlayerException(f"Invalid sex value ({value}) for Player.", field='sex')
+            raise PlayerException(f"Invalid sex value ({value}) for Player.")
 
     @property
     def elo(self) -> int:
@@ -106,7 +106,7 @@ class Player(Mapping):
     @elo.setter
     def elo(self, value: int):
         if value < 100:
-            raise PlayerException("Elo rating cannot be below 100.", field='elo')
+            raise PlayerException("Elo rating cannot be below 100.")
         self._elo = value
 
 
@@ -157,6 +157,3 @@ class TournamentPlayer(Player):
         if not isinstance(new_opponent, TournamentPlayer):
             raise ValueError('A TournamentPlayer opponents must be another TournamentPlayer.')
         self._previous_opponents.append(new_opponent)
-
-# me = Player('Boris', 'DIBON', '1992-08-12', 'male', 1200)
-# print(me)

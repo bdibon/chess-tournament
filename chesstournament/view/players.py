@@ -4,7 +4,7 @@ import typer
 from tabulate import tabulate
 
 from chesstournament import config, __app_name__
-from ..controller.players import PlayersManager
+from ..controller.players import PlayersManager, PlayerSort, sort_players
 from ..model.player import Player, PlayerException
 
 FIRST_NAME_PROMPT = "first name"
@@ -13,7 +13,7 @@ BIRTH_DATE_PROMPT = "date of birth (YYYY-MM-dd)"
 SEX_PROMPT = "sex (M/F)"
 ELO_PROMPT = "Elo"
 
-PLAYER_COLUMNS = ("ID", "first_name", "last_name", "birth_date", "sex", "elo")
+PLAYER_COLUMNS = ("id", "first_name", "last_name", "birth_date", "sex", "elo")
 
 app = typer.Typer(add_completion=False)
 
@@ -26,25 +26,80 @@ def add():
     try:
         player = Player(*player_fields)
         players_manager = get_players_manager()
-        players_manager.save(player)
+        players_manager.add(player)
         typer.secho(
             f"\nPlayer was created successfully.",
             fg=typer.colors.GREEN,
         )
         print_players([player])
-    except PlayerException as error:
+    except (PlayerException, Exception) as error:
+        error_message = error.message if isinstance(error, PlayerException) else error.args[0]
         typer.secho(
-            f'\nPlayer was not created:\n{error.message}',
+            f'\nPlayer was not created:\n{error_message}',
             fg=typer.colors.RED,
             err=True
         )
         raise typer.Exit(1)
 
 
+@app.command()
+def list(
+        sort_alpha: bool = typer.Option(
+            False,
+            "--sort-alpha",
+            help="Sort the players alphabetically by their last name."
+        ),
+        sort_elo: bool = typer.Option(
+            False,
+            "--sort-elo",
+            help="Sort the players by their Elo rank."
+        )
+):
+    """List saved players, sorted by id (default).
+
+    Combining different sorting options has undefined behavior.
+    """
+    sort_flag = PlayerSort.NONE
+    if sort_alpha:
+        sort_flag |= PlayerSort.ALPHA
+    if sort_elo:
+        sort_flag |= PlayerSort.ELO
+
+    try:
+        players_manager = get_players_manager()
+        saved_players = players_manager.get_all()
+        sort_players(saved_players, sort_flag)
+        print_players(saved_players)
+    except (PlayerException, Exception) as error:
+        error_message = error.message if isinstance(error, PlayerException) else error.args[0]
+        typer.secho(
+            f'\nCould not retrieve saved players:\n{error_message}',
+            fg=typer.colors.RED,
+            err=True
+        )
+        raise typer.Exit(1)
+
+
+@app.command
+def udpate(
+        id: int = typer.Option(
+            ...,
+            help="The 'id' of the player to update."
+        ),
+        rank: int = typer.Option(
+            ...,
+            help="The new rank of the player."
+        )):
+    pass
+
 def print_players(players: List[Player]):
     """Print a list of players to stdout."""
-    table = [[player.id, player.first_name, player.last_name, player.birth_date, player.sex, player.elo] for
-             player in players]
+    table = []
+    for player in players:
+        player_data = []
+        for field in PLAYER_COLUMNS:
+            player_data.append(player.get(field))
+        table.append(player_data)
     typer.echo(f"\n{tabulate(table, PLAYER_COLUMNS, tablefmt='github')}")
 
 
