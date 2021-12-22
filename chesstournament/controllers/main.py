@@ -8,11 +8,12 @@ import typer
 from chesstournament import __app_name__, __version__, config, ERRORS
 from chesstournament import cli
 from chesstournament.models import database
-from chesstournament.controllers import players
+from chesstournament.controllers import players, tournaments
 
 
 app = typer.Typer(add_completion=False)
 app.add_typer(players.app, name='players', help='Manage players in the app.')
+app.add_typer(tournaments.app, name='tournaments', help='Manage tournaments in the app')
 
 @app.command()
 def init(db_path: str = typer.Option(

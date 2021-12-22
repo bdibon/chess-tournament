@@ -1,32 +1,91 @@
+"""This module provides the tournaments view."""
+
+from datetime import datetime, MAXYEAR
+from enum import Flag, auto
 from typing import List
 
-from tinydb import TinyDB
+import typer
 
-from chesstournament.models.tournament import Tournament
+from chesstournament import cli, __app_name__
+from chesstournament import config
+from chesstournament.models.database import TournamentsManager, DatabaseException
+from chesstournament.models.tournament import Tournament, TournamentException, TIME_FORMAT_TOURNAMENT
+
+app = typer.Typer(add_completion=False)
 
 
-class TournamentsManager:
-    """Controller that manages players."""
+@app.command()
+def add():
+    """Add a new tournament to the database."""
+    tournament_fields = cli.tournaments.prompt_new()
 
-    def __init__(self, db_path: str) -> None:
-        self._database = TinyDB(db_path)
+    try:
+        tournament = Tournament(**tournament_fields)
 
-    def add(self, new_tournament: Tournament) -> int:
-        del new_tournament.id
-        new_tournament.id = self._database.table('tournaments').insert(new_tournament)
-        return new_tournament.id
+        tournaments_manager = get_tournaments_manager()
+        tournaments_manager.add(tournament)
+        cli.utils.print_success(f"\nTournament was created successfully.")
+        cli.tournaments.print_list([tournament])
+    except (TournamentException, DatabaseException) as error:
+        cli.utils.print_error(f'\nTournament was not created:\n{error.message}')
+        raise typer.Exit(1)
 
-    def get_all(self) -> List[Tournament]:
-        tournaments = self._database.table('tournaments').all()
-        return [Tournament(**tournament, id=tournament.doc_id) for tournament in tournaments]
 
-    def get_by_id(self, tournament_id: int):
-        tournament = self._database.table('tournaments').get(doc_id=tournament_id)
-        return Tournament(**tournament, id=tournament.doc_id)
+@app.command("list")
+def list_tournaments(
+        sort_recent: bool = typer.Option(
+            False,
+            "--sort-recent",
+            help="Sort the tournaments by date (recent first)"
+        ),
+):
+    """List saved tournaments, sorted by id (default).
 
-    def update_one(self, tournament: Tournament):
-        tournament_id = tournament.id
-        del tournament.id
-        doc_id, = self._database.table('tournaments').update(tournament, doc_ids=[tournament_id])
-        tournament.id = doc_id
-        return doc_id
+    Combining different sorting options has undefined behavior.
+    """
+    sort_flag = TournamentSort.NONE
+    if sort_recent:
+        sort_flag |= TournamentSort.RECENT
+
+    tournament_manager = get_tournaments_manager()
+
+    try:
+        saved_tournaments = tournament_manager.get_all()
+        sort_tournaments(saved_tournaments, sort_flag)
+        cli.tournaments.print_list(saved_tournaments)
+    except (TournamentException, DatabaseException) as error:
+        cli.utils.print_error(f'\nCould not retrieve saved players:\n{error.message}')
+        raise typer.Exit(1)
+
+
+def get_tournaments_manager():
+    """Create a TournamentsManager instance."""
+    try:
+        db_path = config.get_database_path()
+        tournaments_manager = TournamentsManager(str(db_path))
+        return tournaments_manager
+    except Exception:
+        cli.utils.print_error(f"Config file not found. Please, run '{__app_name__} init'.")
+        raise typer.Exit(1)
+
+
+class TournamentSort(Flag):
+    NONE = 0
+    RECENT = auto()
+
+
+def sort_tournaments(tournaments: List[Tournament], flag: TournamentSort = TournamentSort.NONE) -> None:
+    """Sort tournaments according to the specified flag. Many flags results in undefined behavior."""
+
+    def _sort_recent(tournament: Tournament) -> datetime:
+        # 'None' start_date matches current or future tournaments.
+        try:
+            start_date = datetime.strptime(tournament.start_date, TIME_FORMAT_TOURNAMENT)
+        except TypeError:
+            start_date = datetime(year=MAXYEAR, month=1, day=1)
+        return start_date
+
+    if flag == TournamentSort.NONE:
+        return None
+    if flag == TournamentSort.RECENT:
+        tournaments.sort(key=_sort_recent, reverse=True)

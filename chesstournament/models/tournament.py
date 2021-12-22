@@ -3,10 +3,11 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Union, List, Optional
 
-from player import TournamentPlayer
+from chesstournament.models.player import TournamentPlayer
 
 TIME_CONTROLS = ['bullet', 'blitz', 'rapid']
-TIME_FORMAT = '%Y-%m-%d - %H:%M'
+TIME_FORMAT_ROUND = '%Y-%m-%d - %H:%M'
+TIME_FORMAT_TOURNAMENT = '%Y-%m-%d'
 
 
 class TournamentException(Exception):
@@ -71,7 +72,7 @@ class Round:
     def start_date(self, value):
         if value is not None:
             try:
-                datetime.strptime(value, TIME_FORMAT)
+                datetime.strptime(value, TIME_FORMAT_ROUND)
                 self._start_date = value
             except ValueError:
                 raise TournamentException(f'Invalid start_date for round (must be YYYY-mm-dd - HH:MM): {value}.')
@@ -86,7 +87,7 @@ class Round:
     def end_date(self, value):
         if value is not None:
             try:
-                datetime.strptime(value, TIME_FORMAT)
+                datetime.strptime(value, TIME_FORMAT_ROUND)
                 self._end_date = value
             except ValueError:
                 raise TournamentException(f'Invalid end_date for round (must be YYYY-mm-dd - HH:MM): {value}.')
@@ -100,21 +101,21 @@ class Tournament(Mapping):
                  number_of_rounds: int,
                  time_control: str,
                  description: str,
-                 competitors: List[TournamentPlayer] = None,
-                 rounds: List[Round] = None,
                  start_date: Union[str, None] = None,
                  end_date: Union[str, None] = None,
-                 id: Optional[int] = None) -> None:
+                 competitors: List[TournamentPlayer] = None,
+                 rounds: List[Round] = None,
+                 id: Optional[int] = None):
         self._name = name
         self._location = location
         self._number_of_rounds = number_of_rounds
         self._description = description
 
         self.time_control = time_control
-        self.competitors = competitors
-        self.rounds = rounds
         self.start_date = start_date
         self.end_date = end_date
+        self.competitors = competitors
+        self.rounds = rounds
 
         self.id = id
 
@@ -196,7 +197,7 @@ class Tournament(Mapping):
 
         self._rounds.append(new_round)
         if len(self._rounds) == self._number_of_rounds:
-            self._end_date = datetime.now().strftime(TIME_FORMAT)
+            self._end_date = datetime.now().strftime(TIME_FORMAT_TOURNAMENT)
 
     @property
     def start_date(self):
@@ -206,10 +207,10 @@ class Tournament(Mapping):
     def start_date(self, value):
         if value is not None:
             try:
-                datetime.strptime(value, '%Y-%m-%d - %H:%M')
+                datetime.strptime(value, TIME_FORMAT_TOURNAMENT)
                 self._start_date = value
             except ValueError:
-                raise TournamentException(f'Invalid start_date for tournament (must be YYYY-mm-dd - HH:MM): {value}.')
+                raise TournamentException(f'Invalid start_date for tournament (must be YYYY-mm-dd): {value}.')
         else:
             self._start_date = None
 
@@ -221,8 +222,9 @@ class Tournament(Mapping):
     def end_date(self, value):
         if value is not None:
             try:
-                datetime.strptime(value, TIME_FORMAT)
+                datetime.strptime(value, TIME_FORMAT_TOURNAMENT)
                 self._end_date = value
             except ValueError:
-                raise TournamentException(f'Invalid end_date for tournament (must be YYYY-mm-dd - HH:MM): {value}.')
-        self._end_date = None
+                raise TournamentException(f'Invalid end_date for tournament (must be YYYY-mm-dd): {value}.')
+        else:
+            self._end_date = None
