@@ -1,7 +1,7 @@
 """This module provides the Tournament class."""
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Union, List, Optional
-from collections.abc import Mapping
 
 from player import TournamentPlayer
 
@@ -10,7 +10,7 @@ TIME_FORMAT = '%Y-%m-%d - %H:%M'
 
 
 class TournamentException(Exception):
-    """The Tournament module raises this when it is misused."""
+    """The tournament module raises this when it is misused."""
 
     def __init__(self, message: str, field: str = '') -> None:
         """
@@ -104,7 +104,7 @@ class Tournament(Mapping):
                  rounds: List[Round] = None,
                  start_date: Union[str, None] = None,
                  end_date: Union[str, None] = None,
-                 id: Optional[int] = None ) -> None:
+                 id: Optional[int] = None) -> None:
         self._name = name
         self._location = location
         self._number_of_rounds = number_of_rounds

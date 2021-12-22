@@ -2,11 +2,12 @@ from typing import List
 
 from tinydb import TinyDB
 
-from chesstournament.model.tournament import Tournament
+from chesstournament.models.tournament import Tournament
 
 
 class TournamentsManager:
     """Controller that manages players."""
+
     def __init__(self, db_path: str) -> None:
         self._database = TinyDB(db_path)
 

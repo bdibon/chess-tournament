@@ -1,4 +1,4 @@
-"""This is the chess-tournament CLI."""
+"""This is the main controller of chesstournament."""
 
 from pathlib import Path
 from typing import Optional
@@ -6,11 +6,13 @@ from typing import Optional
 import typer
 
 from chesstournament import __app_name__, __version__, config, ERRORS
-from ..model import database
-from ..view import players
+from chesstournament import cli
+from chesstournament.models import database
+from chesstournament.controllers import players
+
 
 app = typer.Typer(add_completion=False)
-app.add_typer(players.app, name='players')
+app.add_typer(players.app, name='players', help='Manage players in the app.')
 
 @app.command()
 def init(db_path: str = typer.Option(
@@ -21,28 +23,20 @@ def init(db_path: str = typer.Option(
     """Initialize chess tournament local storage."""
     app_init_error = config.init_app(db_path)
     if app_init_error:
-        typer.secho(
-            f"Failed to create config file with '{ERRORS[app_init_error]}'",
-            fg=typer.colors.RED
-        )
+        cli.utils.print_error(f"Failed to create config file:\n'{ERRORS[app_init_error]}'")
         raise typer.Exit(1)
 
     db_init_error = database.create_database(Path(db_path))
     if db_init_error:
-        typer.secho(
-            f"Failed to create database file with '{ERRORS[db_init_error]}'",
-            fg=typer.colors.RED
-        )
+        cli.utils.print_error(f"Failed to create database file:\n'{ERRORS[db_init_error]}'", )
         raise typer.Exit(1)
     else:
-        typer.secho(
-            f"Succeed to create local storage file: '{db_path}'",
-            fg=typer.colors.GREEN
-        )
+        cli.utils.print_success(f"Succeed to create local storage file:\n'{db_path}'")
+
 
 def version_callback(value: bool):
     if value:
-        typer.echo(f"{__app_name__} version: {__version__}")
+        cli.utils.print_raw(f"{__app_name__} version: {__version__}")
         raise typer.Exit()
     return None
 
