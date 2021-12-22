@@ -49,7 +49,6 @@ class Player(Mapping):
 
     def __str__(self):
         dict_representation = {key.lstrip('_'): value for key, value in self.__dict__.items()}
-        dict_representation['birth_date'] = str(dict_representation['birth_date'])
         return str(dict_representation)
 
     def __repr__(self):
@@ -81,7 +80,7 @@ class Player(Mapping):
         try:
             datetime.strptime(value, "%Y-%m-%d")
             self._birth_date = value
-        except Exception:
+        except ValueError:
             raise PlayerException("Player's date of birth must be in the YYYY-MM-DD format.")
 
     @property

@@ -1,15 +1,31 @@
 """This module provides the Tournament class."""
-from datetime import date
-from typing import Union, List
+from datetime import datetime
+from typing import Union, List, Optional
+from collections.abc import Mapping
 
 from player import TournamentPlayer
 
 TIME_CONTROLS = ['bullet', 'blitz', 'rapid']
+TIME_FORMAT = '%Y-%m-%d - %H:%M'
+
+
+class TournamentException(Exception):
+    """The Tournament module raises this when it is misused."""
+
+    def __init__(self, message: str, field: str = '') -> None:
+        """
+        Args
+            message (str): description of the error
+            field (str): name of the attribute involved
+        """
+        self.message = message
+        self.field = field
+        super().__init__(self.message)
 
 
 class Round:
-    def __init__(self, name: str, matches: list, start_date: Union[date, str, None] = None,
-                 end_date: Union[date, str, None] = None) -> None:
+    def __init__(self, name: str, matches: list, start_date: Union[str, None] = None,
+                 end_date: Union[str, None] = None) -> None:
         self._name = name
         self._matches = matches
         self._start_date = start_date
@@ -50,60 +66,70 @@ class Round:
     def start_date(self):
         return self._start_date
 
+    # todo: the controller should set the start_date when the round begins
     @start_date.setter
     def start_date(self, value):
-        if value is None:
-            self._start_date = date.today()
-        elif type(value) is str:
-            self._start_date = date.fromisoformat(value)
-        else:
-            self._start_date = date.today()
+        if value is not None:
+            try:
+                datetime.strptime(value, TIME_FORMAT)
+                self._start_date = value
+            except ValueError:
+                raise TournamentException(f'Invalid start_date for round (must be YYYY-mm-dd - HH:MM): {value}.')
+        self._start_date = None
 
     @property
     def end_date(self):
         return self._end_date
 
+    # todo: the controller should set the end_date when the round ends
     @end_date.setter
     def end_date(self, value):
-        if type(value) is str:
-            self._end_date = date.fromisoformat(value)
-        else:
-            self._end_date = value
+        if value is not None:
+            try:
+                datetime.strptime(value, TIME_FORMAT)
+                self._end_date = value
+            except ValueError:
+                raise TournamentException(f'Invalid end_date for round (must be YYYY-mm-dd - HH:MM): {value}.')
+        self._end_date = None
 
 
-class Tournament:
+class Tournament(Mapping):
     def __init__(self,
                  name: str,
                  location: str,
                  number_of_rounds: int,
                  time_control: str,
                  description: str,
-                 competitors: List[TournamentPlayer],
-                 rounds: List[Round],
-                 start_date: Union[date, str, None] = None,
-                 end_date: Union[date, str, None] = None) -> None:
+                 competitors: List[TournamentPlayer] = None,
+                 rounds: List[Round] = None,
+                 start_date: Union[str, None] = None,
+                 end_date: Union[str, None] = None,
+                 id: Optional[int] = None ) -> None:
         self._name = name
         self._location = location
         self._number_of_rounds = number_of_rounds
-        self._time_control = time_control
         self._description = description
-        self._competitors = competitors
-        self._rounds = rounds
-        self._start_date = start_date
-        self._end_date = end_date
+
+        self.time_control = time_control
+        self.competitors = competitors
+        self.rounds = rounds
+        self.start_date = start_date
+        self.end_date = end_date
+
+        self.id = id
+
+    def __len__(self):
+        return len(self.__dict__)
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+    def __iter__(self):
+        return iter(key.lstrip('_') for key in self.__dict__)
 
     def __str__(self):
-        return str({
-            'name': self._name,
-            'location': self._location,
-            'number_of_rounds': self._number_of_rounds,
-            'time_control': self._time_control,
-            'description': self._description,
-            'competitors': self._competitors,
-            'rounds': self._rounds,
-            'start_date': str(self._start_date),
-            'end_date': str(self._end_date)
-        })
+        dict_representation = {key.lstrip('_'): value for key, value in self.__dict__.items()}
+        return str(dict_representation)
 
     def __repr__(self):
         return f"Tournament({self._name}, {self._location}, {self._number_of_rounds}, {self._time_control}," \
@@ -170,7 +196,7 @@ class Tournament:
 
         self._rounds.append(new_round)
         if len(self._rounds) == self._number_of_rounds:
-            self._end_date = date.today()
+            self._end_date = datetime.now().strftime(TIME_FORMAT)
 
     @property
     def start_date(self):
@@ -178,13 +204,25 @@ class Tournament:
 
     @start_date.setter
     def start_date(self, value):
-        if value is None:
-            self._start_date = date.today()
-        elif type(value) is str:
-            self._start_date = date.fromisoformat(value)
+        if value is not None:
+            try:
+                datetime.strptime(value, '%Y-%m-%d - %H:%M')
+                self._start_date = value
+            except ValueError:
+                raise TournamentException(f'Invalid start_date for tournament (must be YYYY-mm-dd - HH:MM): {value}.')
         else:
-            self._start_date = date.today()
+            self._start_date = None
 
     @property
     def end_date(self):
         return self._end_date
+
+    @end_date.setter
+    def end_date(self, value):
+        if value is not None:
+            try:
+                datetime.strptime(value, TIME_FORMAT)
+                self._end_date = value
+            except ValueError:
+                raise TournamentException(f'Invalid end_date for tournament (must be YYYY-mm-dd - HH:MM): {value}.')
+        self._end_date = None
