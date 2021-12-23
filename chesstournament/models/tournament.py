@@ -8,6 +8,7 @@ from chesstournament.models.player import TournamentPlayer
 TIME_CONTROLS = ['bullet', 'blitz', 'rapid']
 TIME_FORMAT_ROUND = '%Y-%m-%d - %H:%M'
 TIME_FORMAT_TOURNAMENT = '%Y-%m-%d'
+MIN_NUMBER_OF_PLAYERS = 2
 
 
 class TournamentException(Exception):
@@ -198,10 +199,10 @@ class Tournament(Mapping):
         return len(self._rounds)
 
     def has_competitors(self):
-        return len(self._rounds)
+        return len(self._competitors)
 
     def has_enough_competitors(self):
-        return len(self._rounds) >= 2
+        return len(self._competitors) >= MIN_NUMBER_OF_PLAYERS
 
     def has_max_rounds(self):
         return len(self._rounds) >= self._number_of_rounds

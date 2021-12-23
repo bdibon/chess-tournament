@@ -47,6 +47,15 @@ class TournamentEngine:
     def display_competitors(self):
         cli.tournaments.print_competitors(self.tournament.name, self.tournament.competitors)
 
+    def display_tournament(self):
+        cli.tournaments.print_list([self.tournament])
+
+    def launch(self):
+        pass
+
+    def resume(self):
+        pass
+
 
 @app.command()
 def init(db_path: str = typer.Option(
@@ -72,45 +81,36 @@ def init(db_path: str = typer.Option(
 def run(tournament_id: int = typer.Option(
     ...,
     "--tournament",
-    "-t")):
+    "-t",
+    help="A tournament id.")):
+    """Run an existing tournament interactively."""
     try:
         tournament_manager = tournaments.get_tournaments_manager()
         player_manager = players.get_players_manager()
         tournament = tournament_manager.get_by_id(tournament_id)
         tournament_engine = TournamentEngine(tournament, player_manager, tournament_manager)
+        tournament_engine.display_tournament()
 
         if tournament.has_competitors():
             tournament_engine.populate_competitors()
 
-        tournament_engine.add_new_competitor()
         tournament_engine.display_competitors()
 
-        # Check if the tournament has started yet.
+        if tournament.has_started():
+            tournament_engine.resume()
 
-        # The tournament has not started.
-        # List the players participating in the tournament.
-        # Ask to add new players (y/n).
-        # When the user says no, stop looping and prompt for the first round.
-        # The tournament has started.
+        while True:
+            if tournament.has_enough_competitors():
+                should_launch = cli.tournaments.should_launch()
+                if should_launch:
+                    tournament_engine.launch()
+                    break
 
-        # if not tournament.has_started():
-        #     while True:
-        #         should_add_player = cli.tournaments.should_add_player()
-        #         if not should_add_player:
-        #             break
-        #
-        #         player_name = cli.tournaments.prompt_new_player()
-        #         new_player = player_manager.get_by_last_name(player_name)
-        #         print('hello world')
-        #         tournament.add_competitor(new_player)
-
-
-
-
-
+            tournament_engine.add_new_competitor()
+            tournament_engine.display_competitors()
 
     except (TournamentException, PlayerException, DatabaseException) as error:
-        cli.utils.print_error(f"\nTournament failed:\n{error.message}")
+        cli.utils.print_error(f"\nTournament execution failed:\n{error.message}")
         raise typer.Exit(1)
 
 

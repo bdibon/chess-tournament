@@ -18,6 +18,7 @@ COMPETITOR_COLUMNS = (
 
 ROUND_NAME = 'round name'
 
+
 def prompt_new() -> dict:
     """Prompts the user to fill in a new tournament's data."""
     typer.echo("\n[ New tournament ]\n")
@@ -62,6 +63,7 @@ def should_add_player() -> bool:
     should = typer.confirm("Do you want to add a new player?")
     return should
 
+
 def prompt_new_player() -> tuple:
     """Asks user for a new player to add to a tournament."""
     typer.echo(f"\n[ New player ]\n"
@@ -84,6 +86,7 @@ def prompt_new_player() -> tuple:
 
     return player_id, first_name, last_name
 
+
 def print_competitors(tournament_name: str, players: list):
     """Print a list of competitors to stdout"""
     table = []
@@ -97,3 +100,8 @@ def print_competitors(tournament_name: str, players: list):
         f"\n[ List of {tournament_name} competitors ]\n"
         f"\n{tabulate(table, COMPETITOR_COLUMNS, tablefmt='github')}\n"
     )
+
+
+def should_launch():
+    should = typer.confirm("Do you want to launch the tournament? (this action is irreversible)", default=False)
+    return should
