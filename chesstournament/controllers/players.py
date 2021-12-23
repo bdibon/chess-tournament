@@ -79,7 +79,12 @@ def update(
     players_manager = get_players_manager()
 
     try:
-        player = players_manager.get_by_id(player_id)
+        player = players_manager.find(player_id)
+
+        if player is None:
+            cli.utils.print_error("Player not found.")
+            raise typer.Exit(1)
+
         old_elo = player.elo
         player.elo = elo
         players_manager.update_one(player)

@@ -31,6 +31,26 @@ def add():
         raise typer.Exit(1)
 
 
+# def add_round():
+#     try:
+#         tournament_manager = get_tournaments_manager()
+#
+#         tournament_id = cli.tournaments.prompt_for_tournament_id()
+#         tournament = tournament_manager.get_by_id(tournament_id)
+#
+#         if not tournament.has_enough_competitors() or tournament.has_max_rounds():
+#             cli.utils.print_error(f"\nTournament {tournament.name} has not enough players or too many rounds.")
+#             raise typer.Exit(1)
+#
+#         cli.tournaments.print_list([tournament])
+#
+#         round_fields = cli.tournaments.prompt_new_round(len(tournament.rounds) + 1)
+#
+#     except (TournamentException, DatabaseException) as error:
+#         cli.utils.print_error(f"\nRound was not created:\n{error.message}")
+#         raise typer.Exit(1)
+
+
 @app.command("list")
 def list_tournaments(
         sort_recent: bool = typer.Option(

@@ -17,10 +17,8 @@ class TournamentException(Exception):
         """
         Args
             message (str): description of the error
-            field (str): name of the attribute involved
         """
         self.message = message
-        self.field = field
         super().__init__(self.message)
 
 
@@ -108,7 +106,7 @@ class Tournament(Mapping):
                  id: Optional[int] = None):
         self._name = name
         self._location = location
-        self._number_of_rounds = number_of_rounds
+        self._number_of_rounds = int(number_of_rounds)
         self._description = description
 
         self.time_control = time_control
@@ -174,8 +172,12 @@ class Tournament(Mapping):
             self._competitors = saved_competitors
 
     def add_competitor(self, new_competitor):
+        if self.has_competitors() and not isinstance(self._competitors[0], TournamentPlayer):
+            raise TournamentException(
+                "Competitors are not instances of TournamentPlayer, you might need to enrich the data."
+            )
         if not isinstance(new_competitor, TournamentPlayer):
-            raise ValueError("Competitors must be instances of TournamentPlayer.")
+            raise TournamentException("Competitors must be instances of TournamentPlayer.")
         self._competitors.append(new_competitor)
 
     @property
@@ -189,8 +191,23 @@ class Tournament(Mapping):
         else:
             self._rounds = saved_rounds
 
+    def is_finished(self):
+        pass
+
+    def has_started(self):
+        return len(self._rounds)
+
+    def has_competitors(self):
+        return len(self._rounds)
+
+    def has_enough_competitors(self):
+        return len(self._rounds) >= 2
+
+    def has_max_rounds(self):
+        return len(self._rounds) >= self._number_of_rounds
+
     def add_round(self, new_round):
-        if len(self._rounds) == self._number_of_rounds:
+        if self.has_max_rounds():
             raise AttributeError(f"This tournament is over ({self._number_of_rounds} max).")
         if not isinstance(new_round, Round):
             raise ValueError("Rounds must be instances of Round.")
@@ -228,3 +245,9 @@ class Tournament(Mapping):
                 raise TournamentException(f'Invalid end_date for tournament (must be YYYY-mm-dd): {value}.')
         else:
             self._end_date = None
+
+    def lean_dump(self):
+        """Returns a lean dictionary of the instance."""
+        dump = dict(self)
+        dump['competitors'] = [comp.lean_dump() for comp in dump['competitors']]
+        return dump

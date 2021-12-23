@@ -11,14 +11,12 @@ SEXES = {'m': 'male', 'f': 'female'}
 class PlayerException(Exception):
     """The player module raises this when the module is misused."""
 
-    def __init__(self, message: str, field: str = '') -> None:
+    def __init__(self, message: str) -> None:
         """
         Args
             message (str): description of the error
-            field (str): name of the attribute involved
         """
         self.message = message
-        self.field = field
         super().__init__(self.message)
 
 
@@ -111,20 +109,22 @@ class Player(Mapping):
 
 class TournamentPlayer(Player):
     def __init__(self,
+                 id: int,
                  first_name: str,
                  last_name: str,
                  birth_date: str,
                  sex: str,
                  elo: int,
-                 previous_opponents: list,
+                 previous_opponents: list = None,
                  score: float = 0) -> None:
         super().__init__(first_name,
                          last_name,
                          birth_date,
                          sex,
-                         elo)
-        self._score = score
-        self._previous_opponents = previous_opponents
+                         elo,
+                         id)
+        self.previous_opponents = previous_opponents
+        self.score = score
 
     def __repr__(self):
         return f"{self.__class__.__name__}" \
@@ -134,6 +134,13 @@ class TournamentPlayer(Player):
     @property
     def score(self):
         return self._score
+
+    @score.setter
+    def score(self, value):
+        if value >= 0 and value % 0.5 == 0:
+            self._score = value
+        else:
+            raise PlayerException(f"Invalid player's score: {value}.")
 
     def wins(self):
         self._score += 1
@@ -154,5 +161,18 @@ class TournamentPlayer(Player):
 
     def add_opponent(self, new_opponent):
         if not isinstance(new_opponent, TournamentPlayer):
-            raise ValueError('A TournamentPlayer opponents must be another TournamentPlayer.')
-        self._previous_opponents.append(new_opponent)
+            raise PlayerException('A TournamentPlayer opponents must be another TournamentPlayer.')
+        self._previous_opponents.append(new_opponent.id)
+
+    def has_faced(self, other_player):
+        return other_player.id in self._previous_opponents
+
+    def lean_dump(self):
+        """Returns a lean version dictionary of the instance."""
+        return {'id': self.id, 'score': self.score, 'elo': self._elo, 'previous_opponents': self.previous_opponents}
+
+    @classmethod
+    def from_player(cls, player: Player):
+        player_dict = dict(player)
+
+        return cls(**player_dict)

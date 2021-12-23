@@ -3,10 +3,10 @@
 from pathlib import Path
 from typing import List
 
-from tinydb import TinyDB
+from tinydb import TinyDB, where
 
 from chesstournament import DB_READ_ERROR, DB_WRITE_ERROR, SUCCESS, ERRORS
-from chesstournament.models.player import Player
+from chesstournament.models.player import Player, TournamentPlayer
 from chesstournament.models.tournament import Tournament
 
 DEFAULT_DB_LOCATION = Path.home() / '.chess_tournament.json'
@@ -55,14 +55,25 @@ class PlayersManager:
         except Exception:
             raise DatabaseException(DB_READ_ERROR)
 
-    def get_by_id(self, player_id: int):
+    def find(self, player_id: int, first_name: str = None, last_name: str = None) -> Player:
         try:
-            player = self._database.table('players').get(doc_id=player_id)
-            return Player(**player, id=player.doc_id)
-        except:
+            if player_id:
+                player = self._database.table('players').get(doc_id=player_id)
+                return None if player is None else Player(**player, id=player.doc_id)
+            else:
+                players = self._database.table('players').search(where('last_name') == last_name.upper())
+
+                if len(players) == 1:
+                    player, = players
+                    return None if player is None else Player(**player, id=player.doc_id)
+                else:
+                    players = [p for p in players if p['first_name'] == first_name.capitalize()]
+                    player = players[0] if len(players) else None
+                    return None if player is None else Player(**player, id=player.doc_id)
+        except Exception as err:
             raise DatabaseException(DB_READ_ERROR)
 
-    def update_one(self, player: Player):
+    def update_one(self, player: Player) -> int:
         player_id = player.id
         del player.id
 
@@ -108,7 +119,7 @@ class TournamentsManager:
         del tournament.id
 
         try:
-            doc_id, = self._database.table('tournaments').update(tournament, doc_ids=[tournament_id])
+            doc_id, = self._database.table('tournaments').update(tournament.lean_dump(), doc_ids=[tournament_id])
             tournament.id = doc_id
             return doc_id
         except Exception:
