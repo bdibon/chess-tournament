@@ -70,6 +70,10 @@ class Player(Mapping):
         self._last_name = value.upper()
 
     @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+
+    @property
     def birth_date(self):
         return self._birth_date
 
@@ -159,15 +163,22 @@ class TournamentPlayer(Player):
         else:
             self._previous_opponents = saved_opponents
 
+    @property
+    def last_opponent(self):
+        return self._previous_opponents[-1]
+
     def add_opponent(self, new_opponent):
         if not isinstance(new_opponent, TournamentPlayer):
             raise PlayerException('A TournamentPlayer opponents must be another TournamentPlayer.')
-        self._previous_opponents.append(new_opponent.id)
+
+        # Facing the same opponent twice in a row is impossible (prevent update case bug).
+        if self.last_opponent != new_opponent.id:
+            self._previous_opponents.append(new_opponent.id)
 
     def has_faced(self, other_player):
         return other_player.id in self._previous_opponents
 
-    def lean_dump(self):
+    def serialize(self):
         """Returns a lean version dictionary of the instance."""
         return {'id': self.id, 'score': self.score, 'elo': self._elo, 'previous_opponents': self.previous_opponents}
 

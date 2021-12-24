@@ -78,7 +78,6 @@ class Round(Mapping):
     def end_date(self):
         return self._end_date
 
-    # todo: the controller should set the end_date when the round ends
     @end_date.setter
     def end_date(self, value):
         try:
@@ -87,7 +86,20 @@ class Round(Mapping):
         except ValueError:
             raise TournamentException(f'Invalid end_date for round (must be YYYY-mm-dd - HH:MM): {value}.')
 
-    def lean_dump(self):
+    def all_matches_completed(self):
+        for m in self.matches:
+            p1_data, p2_data = m
+            p1, p1_score, = p1_data
+            p2, p2_score, = p2_data
+
+            if p1_score is None or p2_score is None:
+                return False
+        return True
+
+    def finish(self):
+        self.end_date = datetime.now().strftime(TIME_FORMAT_ROUND)
+
+    def serialize(self):
         dump = dict(self)
         lean_matches = []
 
@@ -198,6 +210,9 @@ class Tournament(Mapping):
             self._rounds = []
         else:
             self._rounds = saved_rounds
+    @property
+    def last_round(self):
+        return self._rounds[-1]
 
     def is_finished(self):
         pass
@@ -252,9 +267,9 @@ class Tournament(Mapping):
         else:
             self._end_date = None
 
-    def lean_dump(self):
+    def serialize(self):
         """Returns a lean dictionary of the instance."""
         dump = dict(self)
-        dump['competitors'] = [comp.lean_dump() for comp in dump['competitors']]
-        dump['rounds'] = [ro.lean_dump() for ro in dump['rounds']]
+        dump['competitors'] = [comp.serialize() for comp in dump['competitors']]
+        dump['rounds'] = [ro.serialize() for ro in dump['rounds']]
         return dump

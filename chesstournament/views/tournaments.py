@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import typer
 from tabulate import tabulate
 
@@ -18,10 +20,13 @@ COMPETITOR_COLUMNS = (
 
 ROUND_NAME_PROMPT = 'round name'
 
-ROUND_COLUMNS = (
-    "player1", "player2", "outcome",
+ROUND_DETAILS_COLUMNS = (
+    "match #", "player1", "player2", "outcome",
 )
 
+ROUND_OVERVIEW_COLUMNS = (
+    "name", "start_date", "end_date", "status"
+)
 
 def prompt_new() -> dict:
     """Prompts the user to fill in a new tournament's data."""
@@ -39,7 +44,7 @@ def prompt_new() -> dict:
                     (name, location, number_of_rounds, time_control, description, start_date, end_date)))
 
 
-def print_list(tournaments: list):
+def print_tournaments_overview(tournaments: list):
     """Print a list of tournaments to stdout"""
     table = []
     for tournament in tournaments:
@@ -49,6 +54,9 @@ def print_list(tournaments: list):
         table.append(tournament_data)
     typer.echo(f"\n{tabulate(table, TOURNAMENT_COLUMNS, tablefmt='github')}\n")
 
+def print_tournament_header(tournament):
+    typer.echo(f"[ {tournament.name} - Overview ]")
+    print_tournaments_overview([tournament])
 
 def prompt_for_tournament_id() -> int:
     """Prompts the user to fill in a tournament's id."""
@@ -91,8 +99,8 @@ def prompt_new_player() -> tuple:
     return player_id, first_name, last_name
 
 
-def print_competitors(tournament_name: str, players: list):
-    """Print a list of competitors to stdout"""
+def print_scoreboard(tournament_name: str, players: list):
+    """Print the scoreboard of the tournament."""
     table = []
     for p in players:
         p_data = []
@@ -101,7 +109,7 @@ def print_competitors(tournament_name: str, players: list):
         table.append(p_data)
 
     typer.echo(
-        f"\n[ List of {tournament_name} competitors ]\n"
+        f"\n[ {tournament_name} - Scoreboard ]\n"
         f"\n{tabulate(table, COMPETITOR_COLUMNS, tablefmt='github')}\n"
     )
 
@@ -111,17 +119,23 @@ def should_launch():
     return should
 
 
-def print_round(round):
+def print_round_details(round_name: str,
+                        round_num: int,
+                        total_rounds: int,
+                        start_date: str,
+                        end_date: str,
+                        matches: list):
     """Print a round to stdout"""
     typer.echo(
-        f"\n[ {round.name} ]\n"
-        f"\nStarted at: {round.start_date}"
-        f"\nEnded at: {round.end_date or 'N/A'}\n"
+        f"\n[ {round_name} ({round_num} / {total_rounds}) ]\n"
+        f"\nStarted at: {start_date}"
+        f"\nEnded at: {end_date or 'N/A'}\n"
     )
 
     table = []
-    for match in round.matches:
-        match_data = []
+    for idx, match in enumerate(matches):
+        match_data = [f"match {idx + 1}"]
+
         player1_data, player2_data = match
 
         player1, score_p1 = player1_data
@@ -135,13 +149,55 @@ def print_round(round):
         if score_p1 is None:
             outcome = 'N/A'
         elif score_p1 == 1:
-            outcome = 'player1 wins'
+            outcome = f'{fullname_p1} wins'
         elif score_p1 == 0.5:
             outcome = 'draw'
         else:
-            outcome = 'player2 wins'
+            outcome = f'{fullname_p2} wins'
 
         match_data.append(outcome)
         table.append(match_data)
 
-    typer.echo(f"\n{tabulate(table, ROUND_COLUMNS, tablefmt='github')}\n")
+    typer.echo(f"\n{tabulate(table, ROUND_DETAILS_COLUMNS, tablefmt='github')}\n")
+
+
+def print_match(p1_name, p2_name, p1_score):
+    """Print a match's current state."""
+    if p1_score == 0:
+        outcome = f"* {p2_name} * wins!"
+    elif p1_score == 1:
+        outcome = f"* {p1_name} * wins!"
+    elif p1_score == 0.5:
+        outcome = "It's a draw!"
+    else:
+        outcome = "N/A"
+
+    typer.echo(
+        f"\n* {p1_name} * vs * {p2_name} *\n"
+        f"Outcome: {outcome}\n"
+    )
+
+
+def print_rounds(tournament_name: str, rounds: list, matches_per_round: int):
+    """Print a list of rounds.
+
+    Arguments:
+        tournament_name - The name of the parent tournament.
+        rounds - A list of dict with the name, start_date, end_date of each round.
+        matches_per_round - Number of matches per round.
+    """
+    table = []
+    for idx, r in enumerate(rounds):
+        r_data = []
+        for field in ROUND_OVERVIEW_COLUMNS:
+            if field == 'status':
+                r_data.append(f"{idx}/{matches_per_round}")
+            else:
+                field_data = r.get(field) or "N/A"
+                r_data.append(field_data)
+        table.append(r_data)
+
+    typer.echo(
+        f"\n[ {tournament_name} - Rounds Overview ]\n"
+        f"\n{tabulate(table, ROUND_OVERVIEW_COLUMNS, tablefmt='github')}\n"
+    )

@@ -25,7 +25,7 @@ def add():
         tournaments_manager = get_tournaments_registry()
         tournaments_manager.add(tournament)
         cli.utils.print_success(f"\nTournament was created successfully.")
-        cli.tournaments.print_list([tournament])
+        cli.tournaments.print_tournaments_overview([tournament])
     except (TournamentException, DatabaseException) as error:
         cli.utils.print_error(f'\nTournament was not created:\n{error.message}')
         raise typer.Exit(1)
@@ -52,7 +52,7 @@ def list_tournaments(
     try:
         saved_tournaments = tournament_registry.get_all()
         sort_tournaments(saved_tournaments, sort_flag)
-        cli.tournaments.print_list(saved_tournaments)
+        cli.tournaments.print_tournaments_overview(saved_tournaments)
     except (TournamentException, DatabaseException) as error:
         cli.utils.print_error(f'\nCould not retrieve saved players:\n{error.message}')
         raise typer.Exit(1)

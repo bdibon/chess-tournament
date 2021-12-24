@@ -119,7 +119,7 @@ class TournamentsRegistry:
         del tournament.id
 
         try:
-            doc_id, = self._database.table('tournaments').update(tournament.lean_dump(), doc_ids=[tournament_id])
+            doc_id, = self._database.table('tournaments').update(tournament.serialize(), doc_ids=[tournament_id])
             tournament.id = doc_id
             return doc_id
         except Exception:
