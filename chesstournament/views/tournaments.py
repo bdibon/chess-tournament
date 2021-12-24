@@ -16,7 +16,11 @@ COMPETITOR_COLUMNS = (
     "id", "first_name", "last_name", "elo", 'score'
 )
 
-ROUND_NAME = 'round name'
+ROUND_NAME_PROMPT = 'round name'
+
+ROUND_COLUMNS = (
+    "player1", "player2", "outcome",
+)
 
 
 def prompt_new() -> dict:
@@ -54,7 +58,7 @@ def prompt_for_tournament_id() -> int:
 
 def prompt_new_round(round_number) -> str:
     """Prompts the user to fill in a tournament's round data."""
-    name = typer.prompt('\n' + ROUND_NAME, default=f"Round {round_number}")
+    name = typer.prompt('\n' + ROUND_NAME_PROMPT, default=f"Round {round_number}")
     return name
 
 
@@ -105,3 +109,39 @@ def print_competitors(tournament_name: str, players: list):
 def should_launch():
     should = typer.confirm("Do you want to launch the tournament? (this action is irreversible)", default=False)
     return should
+
+
+def print_round(round):
+    """Print a round to stdout"""
+    typer.echo(
+        f"\n[ {round.name} ]\n"
+        f"\nStarted at: {round.start_date}"
+        f"\nEnded at: {round.end_date or 'N/A'}\n"
+    )
+
+    table = []
+    for match in round.matches:
+        match_data = []
+        player1_data, player2_data = match
+
+        player1, score_p1 = player1_data
+        player2, score_p2 = player2_data
+
+        fullname_p1 = f'{player1.first_name} {player1.last_name}'
+        match_data.append(fullname_p1)
+        fullname_p2 = f'{player2.first_name} {player2.last_name}'
+        match_data.append(fullname_p2)
+
+        if score_p1 is None:
+            outcome = 'N/A'
+        elif score_p1 == 1:
+            outcome = 'player1 wins'
+        elif score_p1 == 0.5:
+            outcome = 'draw'
+        else:
+            outcome = 'player2 wins'
+
+        match_data.append(outcome)
+        table.append(match_data)
+
+    typer.echo(f"\n{tabulate(table, ROUND_COLUMNS, tablefmt='github')}\n")

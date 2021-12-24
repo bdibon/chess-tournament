@@ -8,7 +8,7 @@ import typer
 
 from chesstournament import cli, __app_name__
 from chesstournament import config
-from chesstournament.models.database import TournamentsManager, DatabaseException
+from chesstournament.models.database import TournamentsRegistry, DatabaseException
 from chesstournament.models.tournament import Tournament, TournamentException, TIME_FORMAT_TOURNAMENT
 
 app = typer.Typer(add_completion=False)
@@ -22,33 +22,13 @@ def add():
     try:
         tournament = Tournament(**tournament_fields)
 
-        tournaments_manager = get_tournaments_manager()
+        tournaments_manager = get_tournaments_registry()
         tournaments_manager.add(tournament)
         cli.utils.print_success(f"\nTournament was created successfully.")
         cli.tournaments.print_list([tournament])
     except (TournamentException, DatabaseException) as error:
         cli.utils.print_error(f'\nTournament was not created:\n{error.message}')
         raise typer.Exit(1)
-
-
-# def add_round():
-#     try:
-#         tournament_manager = get_tournaments_manager()
-#
-#         tournament_id = cli.tournaments.prompt_for_tournament_id()
-#         tournament = tournament_manager.get_by_id(tournament_id)
-#
-#         if not tournament.has_enough_competitors() or tournament.has_max_rounds():
-#             cli.utils.print_error(f"\nTournament {tournament.name} has not enough players or too many rounds.")
-#             raise typer.Exit(1)
-#
-#         cli.tournaments.print_list([tournament])
-#
-#         round_fields = cli.tournaments.prompt_new_round(len(tournament.rounds) + 1)
-#
-#     except (TournamentException, DatabaseException) as error:
-#         cli.utils.print_error(f"\nRound was not created:\n{error.message}")
-#         raise typer.Exit(1)
 
 
 @app.command("list")
@@ -67,10 +47,10 @@ def list_tournaments(
     if sort_recent:
         sort_flag |= TournamentSort.RECENT
 
-    tournament_manager = get_tournaments_manager()
+    tournament_registry = get_tournaments_registry()
 
     try:
-        saved_tournaments = tournament_manager.get_all()
+        saved_tournaments = tournament_registry.get_all()
         sort_tournaments(saved_tournaments, sort_flag)
         cli.tournaments.print_list(saved_tournaments)
     except (TournamentException, DatabaseException) as error:
@@ -78,12 +58,12 @@ def list_tournaments(
         raise typer.Exit(1)
 
 
-def get_tournaments_manager():
-    """Create a TournamentsManager instance."""
+def get_tournaments_registry():
+    """Create a TournamentsRegistry instance."""
     try:
         db_path = config.get_database_path()
-        tournaments_manager = TournamentsManager(str(db_path))
-        return tournaments_manager
+        tournaments_registry = TournamentsRegistry(str(db_path))
+        return tournaments_registry
     except Exception:
         cli.utils.print_error(f"Config file not found. Please, run '{__app_name__} init'.")
         raise typer.Exit(1)

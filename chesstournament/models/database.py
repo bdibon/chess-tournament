@@ -30,7 +30,7 @@ class DatabaseException(Exception):
         self.message = ERRORS[code]
 
 
-class PlayersManager:
+class PlayersRegistry:
     """Manage players in the database."""
 
     def __init__(self, db_path: str) -> None:
@@ -85,7 +85,7 @@ class PlayersManager:
             raise DatabaseException(DB_WRITE_ERROR)
 
 
-class TournamentsManager:
+class TournamentsRegistry:
     """Manage tournaments in the database."""
 
     def __init__(self, db_path: str) -> None:

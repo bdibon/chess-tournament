@@ -6,7 +6,7 @@ from typing import List
 import typer
 
 from chesstournament import cli, config, __app_name__
-from chesstournament.models.database import PlayersManager, DatabaseException
+from chesstournament.models.database import PlayersRegistry, DatabaseException
 from chesstournament.models.player import Player, PlayerException
 
 app = typer.Typer(add_completion=False)
@@ -20,8 +20,8 @@ def add():
     try:
         player = Player(*player_fields)
 
-        players_manager = get_players_manager()
-        players_manager.add(player)
+        players_registry = get_players_registry()
+        players_registry.add(player)
 
         cli.utils.print_success(f"\nPlayer was created successfully.")
         cli.players.print_list([player])
@@ -53,10 +53,10 @@ def list_players(
     if sort_elo:
         sort_flag |= PlayerSort.ELO
 
-    players_manager = get_players_manager()
+    players_registry = get_players_registry()
 
     try:
-        saved_players = players_manager.get_all()
+        saved_players = players_registry.get_all()
         sort_players(saved_players, sort_flag)
         cli.players.print_list(saved_players)
     except (PlayerException, DatabaseException) as error:
@@ -76,10 +76,10 @@ def update(
             help="The new Elo rating of the player."
         )):
     """Update a player in the local database."""
-    players_manager = get_players_manager()
+    players_registry = get_players_registry()
 
     try:
-        player = players_manager.find(player_id)
+        player = players_registry.find(player_id)
 
         if player is None:
             cli.utils.print_error("Player not found.")
@@ -87,7 +87,7 @@ def update(
 
         old_elo = player.elo
         player.elo = elo
-        players_manager.update_one(player)
+        players_registry.update_one(player)
         cli.utils.print_success(
             f"\nPlayer with id {player_id} ({player.first_name} {player.last_name}) was successfully updated."
             f"\nHis/Her Elo rank went from {old_elo} to {player.elo}.")
@@ -97,12 +97,12 @@ def update(
         raise typer.Exit(1)
 
 
-def get_players_manager() -> PlayersManager:
-    """Create a PlayerManager instance."""
+def get_players_registry() -> PlayersRegistry:
+    """Create a PlayerRegistry instance."""
     try:
         db_path = config.get_database_path()
-        players_manager = PlayersManager(str(db_path))
-        return players_manager
+        players_registry = PlayersRegistry(str(db_path))
+        return players_registry
     except Exception:
         cli.utils.print_error(f"Config file not found. Please, run '{__app_name__} init'.")
         raise typer.Exit(1)

@@ -1,7 +1,7 @@
 """This module provides the Tournament class."""
 from collections.abc import Mapping
 from datetime import datetime
-from typing import Union, List, Optional
+from typing import Union, List, Optional, Tuple
 
 from chesstournament.models.player import TournamentPlayer
 
@@ -23,21 +23,26 @@ class TournamentException(Exception):
         super().__init__(self.message)
 
 
-class Round:
+class Round(Mapping):
     def __init__(self, name: str, matches: list, start_date: Union[str, None] = None,
                  end_date: Union[str, None] = None) -> None:
         self._name = name
         self._matches = matches
-        self._start_date = start_date
+        self._start_date = start_date or datetime.now().strftime(TIME_FORMAT_ROUND)
         self._end_date = end_date
 
+    def __len__(self):
+        return len(self.__dict__)
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+    def __iter__(self):
+        return iter(key.lstrip('_') for key in self.__dict__)
+
     def __str__(self):
-        return str({
-            'name': self._name,
-            'matches': self._matches,
-            'start_date': self._start_date,
-            'end_date': self._end_date
-        })
+        dict_representation = {key.lstrip('_'): value for key, value in self.__dict__.items()}
+        return str(dict_representation)
 
     def __repr__(self):
         return f"Round({self._name}, {self._matches}, {self._start_date}, {self._end_date})"
@@ -57,25 +62,17 @@ class Round:
         else:
             self._matches = saved_matches
 
-    def new_match(self, player_1, player_2):
-        match = ([player_1, None], [player_2, None])
-        self._matches.append(match)
-        return match
-
     @property
     def start_date(self):
         return self._start_date
 
-    # todo: the controller should set the start_date when the round begins
     @start_date.setter
     def start_date(self, value):
-        if value is not None:
-            try:
-                datetime.strptime(value, TIME_FORMAT_ROUND)
-                self._start_date = value
-            except ValueError:
-                raise TournamentException(f'Invalid start_date for round (must be YYYY-mm-dd - HH:MM): {value}.')
-        self._start_date = None
+        try:
+            datetime.strptime(value, TIME_FORMAT_ROUND)
+            self._start_date = value
+        except ValueError:
+            raise TournamentException(f'Invalid start_date for round (must be YYYY-mm-dd - HH:MM): {value}.')
 
     @property
     def end_date(self):
@@ -84,13 +81,23 @@ class Round:
     # todo: the controller should set the end_date when the round ends
     @end_date.setter
     def end_date(self, value):
-        if value is not None:
-            try:
-                datetime.strptime(value, TIME_FORMAT_ROUND)
-                self._end_date = value
-            except ValueError:
-                raise TournamentException(f'Invalid end_date for round (must be YYYY-mm-dd - HH:MM): {value}.')
-        self._end_date = None
+        try:
+            datetime.strptime(value, TIME_FORMAT_ROUND)
+            self._end_date = value
+        except ValueError:
+            raise TournamentException(f'Invalid end_date for round (must be YYYY-mm-dd - HH:MM): {value}.')
+
+    def lean_dump(self):
+        dump = dict(self)
+        lean_matches = []
+
+        for match in dump['matches']:
+            p1, score_p1= match[0]
+            p2, score_p2 = match[1]
+            lean_matches.append(([p1.id, score_p1], [p2.id, score_p2]))
+
+        dump['matches'] = lean_matches
+        return dump
 
 
 class Tournament(Mapping):
@@ -207,15 +214,13 @@ class Tournament(Mapping):
     def has_max_rounds(self):
         return len(self._rounds) >= self._number_of_rounds
 
-    def add_round(self, new_round):
+    def add_round(self, name: str, fixtures: List[Tuple[TournamentPlayer]]):
         if self.has_max_rounds():
             raise AttributeError(f"This tournament is over ({self._number_of_rounds} max).")
-        if not isinstance(new_round, Round):
-            raise ValueError("Rounds must be instances of Round.")
 
+        matches = [([p, None], [q, None]) for (p, q) in fixtures]
+        new_round = Round(name, matches)
         self._rounds.append(new_round)
-        if len(self._rounds) == self._number_of_rounds:
-            self._end_date = datetime.now().strftime(TIME_FORMAT_TOURNAMENT)
 
     @property
     def start_date(self):
@@ -251,4 +256,5 @@ class Tournament(Mapping):
         """Returns a lean dictionary of the instance."""
         dump = dict(self)
         dump['competitors'] = [comp.lean_dump() for comp in dump['competitors']]
+        dump['rounds'] = [ro.lean_dump() for ro in dump['rounds']]
         return dump
