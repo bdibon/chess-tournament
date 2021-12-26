@@ -187,11 +187,19 @@ def print_rounds(tournament_name: str, rounds: list, matches_per_round: int):
         matches_per_round - Number of matches per round.
     """
     table = []
-    for idx, r in enumerate(rounds):
+    for r in rounds:
         r_data = []
         for field in ROUND_OVERVIEW_COLUMNS:
             if field == 'status':
-                r_data.append(f"{idx}/{matches_per_round}")
+                match_id = 0
+                while match_id < len(r.matches):
+                    match = r.matches[match_id]
+                    player1_data, player2_data = match
+                    player1, score_p1 = player1_data
+                    if score_p1 is None:
+                        break
+                    match_id += 1
+                r_data.append(f"{match_id}/{matches_per_round}")
             else:
                 field_data = r.get(field) or "N/A"
                 r_data.append(field_data)

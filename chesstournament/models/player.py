@@ -171,7 +171,7 @@ class TournamentPlayer(Player):
         if not isinstance(new_opponent, TournamentPlayer):
             raise PlayerException('A TournamentPlayer opponents must be another TournamentPlayer.')
 
-        # Facing the same opponent twice in a row is impossible (prevent update case bug).
+        # We don't care about the frequency at which they faced each others.
         if self.last_opponent != new_opponent.id:
             self._previous_opponents.append(new_opponent.id)
 

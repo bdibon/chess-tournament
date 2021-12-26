@@ -2,6 +2,7 @@
 
 from enum import Flag, auto
 from typing import List
+from operator import attrgetter
 
 import typer
 
@@ -24,7 +25,7 @@ def add():
         players_registry.add(player)
 
         cli.utils.print_success(f"\nPlayer was created successfully.")
-        cli.players.print_tournaments_overview([player])
+        cli.players.print_list([player])
     except (PlayerException, DatabaseException) as error:
         cli.utils.print_error(f'\nPlayer was not created:\n{error.message}')
         raise typer.Exit(1)
@@ -58,7 +59,7 @@ def list_players(
     try:
         saved_players = players_registry.get_all()
         sort_players(saved_players, sort_flag)
-        cli.players.print_tournaments_overview(saved_players)
+        cli.players.print_list(saved_players)
     except (PlayerException, DatabaseException) as error:
         cli.utils.print_error(f'\nCould not retrieve saved players:\n{error.message}')
         raise typer.Exit(1)
@@ -91,7 +92,7 @@ def update(
         cli.utils.print_success(
             f"\nPlayer with id {player_id} ({player.first_name} {player.last_name}) was successfully updated."
             f"\nHis/Her Elo rank went from {old_elo} to {player.elo}.")
-        cli.players.print_tournaments_overview([player])
+        cli.players.print_list([player])
     except (PlayerException, DatabaseException) as error:
         cli.utils.print_error(f'\nCould not update player with id: {player_id}:\n{error.message}')
         raise typer.Exit(1)
@@ -117,16 +118,9 @@ class PlayerSort(Flag):
 
 def sort_players(players: List[Player], flag: PlayerSort = PlayerSort.NONE) -> None:
     """Sort players according to the specified flag. Many flags results in undefined behavior."""
-
-    def _sort_alpha(player):
-        return player.last_name
-
-    def _sort_elo(player):
-        return player.elo
-
     if flag == PlayerSort.NONE:
         return None
     if flag == PlayerSort.ALPHA:
-        players.sort(key=_sort_alpha)
+        players.sort(key=attrgetter('last_name', 'first_name'))
     if flag == PlayerSort.ELO:
-        players.sort(key=_sort_elo, reverse=True)
+        players.sort(key=attrgetter('elo'), reverse=True)

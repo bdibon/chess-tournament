@@ -3,6 +3,7 @@
 import itertools
 from pathlib import Path
 from typing import Optional
+from operator import attrgetter
 
 import typer
 
@@ -38,7 +39,7 @@ class TournamentEngine:
     MAIN_MENU_CURRENT_ROUND= 3
 
     ROUND_MENU_BACK = 1
-    ROUND_MENU_FINISH = 2
+    ROUND_MENU_FINISH = 99
 
     MATCH_MENU_BACK = 1
     MATCH_MENU_P1_WINS = 2
@@ -119,27 +120,18 @@ class TournamentEngine:
         player1.add_opponent(player2)
         player2.add_opponent(player1)
 
+        # Reset player's "tournament" score.
+        player1.score = player1.score - (score_p1 or 0)
+        player2.score = player2.score - (score_p2 or 0)
         if outcome == self.MATCH_MENU_P1_WINS:
-            # Reset player's "tournament" score.
-            player1.score = player1.score - player1_data[1]
-            player2.score = player2.score - player2_data[1]
-
             player1.wins()
             player1_data[1] = 1
             player2_data[1] = 0
         elif outcome == self.MATCH_MENU_P2_WINS:
-            # Reset player's "tournament" score.
-            player1.score = player1.score - player1_data[1]
-            player2.score = player2.score - player2_data[1]
-
             player2.wins()
             player1_data[1] = 0
             player2_data[1] = 1
         elif outcome == self.MATCH_MENU_DRAW:
-            # Reset player's "tournament" score.
-            player1.score = player1.score - player1_data[1]
-            player2.score = player2.score - player2_data[1]
-
             player1.draws()
             player2.draws()
             player1_data[1] = 0.5
@@ -150,7 +142,8 @@ class TournamentEngine:
         self.save_tournament()
 
     def sort_competitors(self) -> list:
-        return sorted(self.tournament.competitors, key=lambda player: player.score, reverse=True)
+        """Sort competitors by their score and elo."""
+        return sorted(self.tournament.competitors, key=attrgetter('score', 'elo'), reverse=True)
 
     def display_scoreboard(self):
         """Display competitors of the current tournament."""
@@ -195,17 +188,16 @@ class TournamentEngine:
         menu_items = dict()
         menu_items[self.ROUND_MENU_BACK] = "Back"
 
-        gap = 2
-        if current_round.all_matches_completed():
-            menu_items[self.ROUND_MENU_FINISH] = "Mark as finished (irreversible)"
-            gap = 3
-
         for idx, match in enumerate(current_round.matches):
             p1_data, p2_data = match
             p1, p1_score = p1_data
             p2, p2_score = p2_data
 
-            menu_items[idx + gap] = f"{p1.full_name} vs {p2.full_name}"
+            menu_items[idx + 2] = f"{p1.full_name} vs {p2.full_name}"
+
+        if current_round.all_matches_completed():
+            self.ROUND_MENU_FINISH = len(current_round.matches) + 1
+            menu_items[self.ROUND_MENU_FINISH] = "Mark as finished (irreversible)"
 
         choice = cli.utils.print_menu(menu_items)
         return choice
@@ -269,9 +261,40 @@ class TournamentEngine:
         # Add first round to the tournament.
         round_name = cli.tournaments.prompt_new_round(len(self.tournament.rounds) + 1)
         self.tournament.add_round(round_name, fixtures)
-        self.tournament_registry.update_one(self.tournament)
 
+        self.save_tournament()
         self.resume()
+
+    def launch_next_round(self) -> None:
+        if self.tournament.has_max_rounds():
+            return
+
+        # Sort players by score, then by elo.
+        self.tournament.competitors = self.sort_competitors()
+
+        busy_players = []
+        fixtures = []
+        for ida, player_a in enumerate(self.tournament.competitors[:-1], start=0):
+            if player_a in busy_players:
+                continue
+            for idb, player_b in enumerate(self.tournament.competitors[ida + 1:], start=ida + 1):
+                if player_b in busy_players:
+                    continue
+
+                if not player_a.has_faced(player_b):
+                    fixtures.append((player_a, player_b))
+                    busy_players.append(player_b)
+                    break
+
+                # player_a has faced every other players, make him play with the next player on the scoreboard.
+                if idb == len(self.tournament.competitors) - 1:
+                    next_player = self.tournament.competitors[ida + 1]
+                    fixtures.append((player_a, next_player))
+                    busy_players.append(next_player)
+
+        round_name = cli.tournaments.prompt_new_round(len(self.tournament.rounds) + 1)
+        self.tournament.add_round(round_name, fixtures)
+        self.save_tournament()
 
     def resume(self) -> None:
         """Resume tournament."""
@@ -300,11 +323,12 @@ class TournamentEngine:
                     continue
                 elif round_menu_item == self.ROUND_MENU_FINISH:
                     current_round.finish()
-                    # create new round
+                    self.save_tournament()
+                    self.launch_next_round()
                 else:
                     # Match menu.
+                    current_match = current_round.matches[round_menu_item - (self.ROUND_MENU_BACK + 1)]
                     while True:
-                        current_match = current_round.matches[round_menu_item - (self.ROUND_MENU_BACK + 1)]
                         self.display_match_infos(current_match)
                         match_menu_item = self.prompt_match_menu(current_match)
 
@@ -312,13 +336,10 @@ class TournamentEngine:
                             break
                         elif match_menu_item == self.MATCH_MENU_P1_WINS:
                             self.update_match_outcome(current_match, self.MATCH_MENU_P1_WINS)
-                            continue
                         elif match_menu_item == self.MATCH_MENU_P2_WINS:
                             self.update_match_outcome(current_match, self.MATCH_MENU_P2_WINS)
-                            continue
                         elif match_menu_item == self.MATCH_MENU_DRAW:
                             self.update_match_outcome(current_match, self.MATCH_MENU_DRAW)
-                            continue
 
 
 
