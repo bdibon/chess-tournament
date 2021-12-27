@@ -106,7 +106,10 @@ class Round(Mapping):
         for match in dump['matches']:
             p1, score_p1= match[0]
             p2, score_p2 = match[1]
-            lean_matches.append(([p1.id, score_p1], [p2.id, score_p2]))
+
+            p1_id = getattr(p1, 'id', None)
+            p2_id = getattr(p2, 'id', None)
+            lean_matches.append(([p1_id, score_p1], [p2_id, score_p2]))
 
         dump['matches'] = lean_matches
         return dump
@@ -173,7 +176,7 @@ class Tournament(Mapping):
     @time_control.setter
     def time_control(self, value):
         if value not in TIME_CONTROLS:
-            raise ValueError(f"time_control must be one of {', '.join(TIME_CONTROLS)}.")
+            raise TournamentException(f"time_control must be one of {', '.join(TIME_CONTROLS)}.")
         self._time_control = value
 
     @property
@@ -231,9 +234,19 @@ class Tournament(Mapping):
 
     def add_round(self, name: str, fixtures: List[Tuple[TournamentPlayer]]):
         if self.has_max_rounds():
-            raise AttributeError(f"This tournament is over ({self._number_of_rounds} max).")
+            raise TournamentException(f"This tournament is over ({self._number_of_rounds} max).")
 
-        matches = [([p, None], [q, None]) for (p, q) in fixtures]
+        matches = []
+        for (p, q) in fixtures:
+            if p is None:
+                q.wins()
+            if q is None:
+                p.wins()
+
+            p_data = [p, None]
+            q_data = [q, None]
+            matches.append((p_data, q_data))
+
         new_round = Round(name, matches)
         self._rounds.append(new_round)
 

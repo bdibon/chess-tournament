@@ -19,7 +19,11 @@ def print_raw(message: str):
     typer.echo(message)
 
 
-def print_menu(menu_items: dict):
+def prompt_value(description: str, expected_type: type = None) -> any:
+    return typer.prompt(f"\n{description}", type=expected_type)
+
+
+def prompt_menu(menu_items: dict):
     """Prints a menu and prompts the user to make a choice.
 
     Arguments:

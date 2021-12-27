@@ -21,11 +21,15 @@ COMPETITOR_COLUMNS = (
 ROUND_NAME_PROMPT = 'round name'
 
 ROUND_DETAILS_COLUMNS = (
-    "match #", "player1", "player2", "outcome",
+    "match #", "player 1", "player 2", "outcome",
 )
 
 ROUND_OVERVIEW_COLUMNS = (
     "name", "start_date", "end_date", "status"
+)
+
+MATCH_HISTORY_COLUMNS = (
+    "round", "match #", "player 1", "player 2", "outcome"
 )
 
 def prompt_new() -> dict:
@@ -64,8 +68,9 @@ def prompt_for_tournament_id() -> int:
     return tournament_id
 
 
-def prompt_new_round(round_number) -> str:
+def prompt_new_round(tournament_name: str, round_number: int) -> str:
     """Prompts the user to fill in a tournament's round data."""
+    typer.echo(f"[ {tournament_name} - New round ]")
     name = typer.prompt('\n' + ROUND_NAME_PROMPT, default=f"Round {round_number}")
     return name
 
@@ -76,27 +81,27 @@ def should_add_player() -> bool:
     return should
 
 
-def prompt_new_player() -> tuple:
-    """Asks user for a new player to add to a tournament."""
-    typer.echo(f"\n[ New player ]\n"
-               f"\n1. Add player from id"
-               f'\n2. Add player from name\n')
-
-    by_id, by_fullname = (1, 2)
-    lookup_method = None
-    while lookup_method not in (by_id, by_fullname):
-        lookup_method = typer.prompt("", prompt_suffix='> ', type=int)
-
-    player_id = None
-    first_name = None
-    last_name = None
-    if lookup_method == by_id:
-        player_id = typer.prompt("\nPlayer's id", type=int)
-    elif lookup_method == by_fullname:
-        first_name = typer.prompt("\nPlayer's first name")
-        last_name = typer.prompt("Player's last name")
-
-    return player_id, first_name, last_name
+# def prompt_new_player() -> tuple:
+#     """Asks user for a new player to add to a tournament."""
+#     typer.echo(f"\n[ New player ]\n"
+#                f"\n1. Add player from id"
+#                f'\n2. Add player from name\n')
+#
+#     by_id, by_fullname = (1, 2)
+#     lookup_method = None
+#     while lookup_method not in (by_id, by_fullname):
+#         lookup_method = typer.prompt("", prompt_suffix='> ', type=int)
+#
+#     player_id = None
+#     first_name = None
+#     last_name = None
+#     if lookup_method == by_id:
+#         player_id = typer.prompt("\nPlayer's id", type=int)
+#     elif lookup_method == by_fullname:
+#         first_name = typer.prompt("\nPlayer's first name")
+#         last_name = typer.prompt("Player's last name")
+#
+#     return player_id, first_name, last_name
 
 
 def print_scoreboard(tournament_name: str, players: list):
@@ -115,7 +120,8 @@ def print_scoreboard(tournament_name: str, players: list):
 
 
 def should_launch():
-    should = typer.confirm("Do you want to launch the tournament? (this action is irreversible)", default=False)
+    should = typer.confirm("Do you want to launch the tournament? (this action is irreversible", default=False)
+    typer.echo()
     return should
 
 
@@ -161,14 +167,14 @@ def print_round_details(round_name: str,
     typer.echo(f"\n{tabulate(table, ROUND_DETAILS_COLUMNS, tablefmt='github')}\n")
 
 
-def print_match(p1_name, p2_name, p1_score):
+def print_match(p1_name, p2_name, p1_score, p2_score):
     """Print a match's current state."""
     if p1_score == 0:
-        outcome = f"* {p2_name} * wins!"
+        outcome = f"* {p2_name} * wins! (+{p2_score} pts)"
     elif p1_score == 1:
-        outcome = f"* {p1_name} * wins!"
+        outcome = f"* {p1_name} * wins! (+{p1_score} pts)"
     elif p1_score == 0.5:
-        outcome = "It's a draw!"
+        outcome = f"It's a draw! (+{p1_score} pts each)"
     else:
         outcome = "N/A"
 
@@ -209,3 +215,21 @@ def print_rounds(tournament_name: str, rounds: list, matches_per_round: int):
         f"\n[ {tournament_name} - Rounds Overview ]\n"
         f"\n{tabulate(table, ROUND_OVERVIEW_COLUMNS, tablefmt='github')}\n"
     )
+
+
+def print_match_history(headers: tuple, items: list, heading: str = None):
+    """Print a match history, that is a list of match with their associated round_name."""
+
+    table = []
+    for item in items:
+        item_data = []
+        for field in headers:
+            field_data = item.get(field) or "N/A"
+            item_data.append(field_data)
+        table.append(item_data)
+
+    content = f"\n{tabulate(table, headers, tablefmt='github')}\n"
+    if heading is not None:
+        content = f"\n[ {heading} ]\n" + content
+
+    typer.echo(content)

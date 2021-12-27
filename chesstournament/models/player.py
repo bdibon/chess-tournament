@@ -164,16 +164,14 @@ class TournamentPlayer(Player):
             self._previous_opponents = saved_opponents
 
     @property
-    def last_opponent(self):
-        return self._previous_opponents[-1]
+    def last_opponent(self) -> id:
+        return self._previous_opponents[-1] if len(self._previous_opponents) else None
 
     def add_opponent(self, new_opponent):
         if not isinstance(new_opponent, TournamentPlayer):
             raise PlayerException('A TournamentPlayer opponents must be another TournamentPlayer.')
 
-        # We don't care about the frequency at which they faced each others.
-        if self.last_opponent != new_opponent.id:
-            self._previous_opponents.append(new_opponent.id)
+        self._previous_opponents.append(new_opponent.id)
 
     def has_faced(self, other_player):
         return other_player.id in self._previous_opponents
