@@ -2,6 +2,7 @@
 from collections.abc import Mapping
 from datetime import datetime
 from typing import Union, List, Optional, Tuple
+import math
 
 from chesstournament.models.player import TournamentPlayer
 
@@ -213,12 +214,22 @@ class Tournament(Mapping):
             self._rounds = []
         else:
             self._rounds = saved_rounds
+
+    @property
+    def number_of_competitors(self):
+        return len(self._competitors)
+
+    @property
+    def first_round(self):
+        return self._rounds[1] if len(self._rounds) >= 1 else None
+
     @property
     def last_round(self):
-        return self._rounds[-1]
+        return self._rounds[-1] if len(self._rounds) >= 1 else None
 
-    def is_finished(self):
-        pass
+    @property
+    def matches_per_round(self):
+        return math.ceil(self.number_of_competitors / 2)
 
     def has_started(self):
         return len(self._rounds)
@@ -229,22 +240,30 @@ class Tournament(Mapping):
     def has_enough_competitors(self):
         return len(self._competitors) >= MIN_NUMBER_OF_PLAYERS
 
-    def has_max_rounds(self):
+    @property
+    def is_over(self):
         return len(self._rounds) >= self._number_of_rounds
 
     def add_round(self, name: str, fixtures: List[Tuple[TournamentPlayer]]):
-        if self.has_max_rounds():
+        if self.is_over:
             raise TournamentException(f"This tournament is over ({self._number_of_rounds} max).")
 
         matches = []
         for (p, q) in fixtures:
+            p_score = None
+            q_score = None
+
             if p is None:
                 q.wins()
+                p_score = 0
+                q_score = 1
             if q is None:
                 p.wins()
+                p_score = 1
+                q_score = 0
 
-            p_data = [p, None]
-            q_data = [q, None]
+            p_data = [p, p_score]
+            q_data = [q, q_score]
             matches.append((p_data, q_data))
 
         new_round = Round(name, matches)

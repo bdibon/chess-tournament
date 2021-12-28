@@ -4,13 +4,13 @@ import itertools
 from operator import attrgetter
 from pathlib import Path
 from typing import Optional
+import math
 
 import typer
 
 from chesstournament import __app_name__, __version__, config, ERRORS
 from chesstournament import cli
 from chesstournament.controllers import players, tournaments
-from chesstournament.controllers.players import PlayerSort, sort_players
 from chesstournament.models.database import DEFAULT_DB_LOCATION, DatabaseException, create_database
 from chesstournament.models.player import PlayerException, TournamentPlayer
 from chesstournament.models.tournament import TournamentException, Round
@@ -37,7 +37,8 @@ class TournamentEngine:
     # Menu constants.
     COMPETITOR_MENU_ID = 1
     COMPETITOR_MENU_NAME = 2
-    COMPETITOR_MENU_LAUNCH = 3
+    COMPETITOR_MENU_LIST_PLAYERS = 3
+    COMPETITOR_MENU_LAUNCH = 4
 
     MAIN_MENU_HEADER= 1
     MAIN_MENU_SCOREBOARD = 2
@@ -87,6 +88,9 @@ class TournamentEngine:
         elif menu_item == self.COMPETITOR_MENU_NAME:
             first_name = cli.utils.prompt_value("First name", str)
             last_name = cli.utils.prompt_value("Last name", str)
+        elif menu_item == self.COMPETITOR_MENU_LIST_PLAYERS:
+            self.display_scoreboard()
+            return
         elif menu_item == self.COMPETITOR_MENU_LAUNCH:
             self.launch()
             return
@@ -103,14 +107,15 @@ class TournamentEngine:
 
     def prompt_new_competitor_menu(self) -> int:
         menu_items = {
-            self.COMPETITOR_MENU_ID: "Add by id",
-            self.COMPETITOR_MENU_NAME: "Add by name"
+            self.COMPETITOR_MENU_ID: "Add player by id",
+            self.COMPETITOR_MENU_NAME: "Add player by name",
+            self.COMPETITOR_MENU_LIST_PLAYERS: "List registered players"
         }
 
         if self.tournament.has_enough_competitors():
             menu_items[self.COMPETITOR_MENU_LAUNCH] = "Launch tournament (irreversible)"
-            choice = cli.utils.prompt_menu(menu_items)
 
+        choice = cli.utils.prompt_menu(menu_items)
         return choice
 
     def has_populated_rounds(self) -> bool:
@@ -201,17 +206,45 @@ class TournamentEngine:
         """Display basic info about the current tournament."""
         cli.tournaments.print_tournament_header(self.tournament)
 
+        if self.tournament.is_over:
+            cli.utils.print_raw("\nThis tournament is over.\n")
+
     def display_round_infos(self, current_round: Round):
         round_idx = self.tournament.rounds.index(current_round)
 
-        cli.tournaments.print_round_details(
-            current_round.name,
-            round_idx + 1,
-            self.tournament.number_of_rounds,
-            current_round.start_date,
-            current_round.end_date,
-            current_round.matches
-        )
+        matches = []
+        for idx, m in enumerate(current_round.matches, start=1):
+            player1_data, player2_data = m
+
+            player1, score_p1 = player1_data
+            player2, score_p2 = player2_data
+
+            player1_fullname = getattr(player1, 'full_name', 'N/A')
+            player2_fullname = getattr(player2, 'full_name', 'N/A')
+
+            if score_p1 == 1:
+                outcome = f"{player1_fullname} WINS"
+            elif score_p2 == 1:
+                outcome = f"{player2_fullname} WINS"
+            elif score_p1 == 0.5:
+                outcome = "DRAW"
+            else:
+                outcome = "N/A"
+
+            m_data = {
+                'match #': f"match {idx}",
+                'player 1': player1_fullname,
+                'player 2': player2_fullname,
+                'outcome': outcome
+            }
+            matches.append(m_data)
+
+        heading = f"{current_round.name} ({round_idx + 1}/{self.tournament.number_of_rounds})"
+        description = f"\nStarted at: {current_round.start_date}"\
+                      f"\nEnded at: {getattr(current_round, 'end_date', 'N/A')}\n"
+
+        cli.utils.print_tabular_data(header=('match #', 'player 1', 'player 2', 'outcome'), items=matches,
+                                     heading=heading, description=description)
 
     def display_state(self):
         """Display the tournament current state."""
@@ -224,28 +257,33 @@ class TournamentEngine:
         self.display_round_infos(self.tournament.last_round)
 
     def prompt_main_menu(self) -> int:
-        choice = cli.utils.prompt_menu({
+        menu_items = {
             self.MAIN_MENU_HEADER: "Header",
             self.MAIN_MENU_SCOREBOARD: "Scoreboard",
             self.MAIN_MENU_LIST_ROUNDS: "List rounds",
-            self.MAIN_MENU_MATCH_HISTORY: "Match history",
-            self.MAIN_MENU_CURRENT_ROUND: "Current round"
-        })
+            self.MAIN_MENU_MATCH_HISTORY: "Match history"
+        }
+
+        if not self.tournament.is_over:
+            menu_items[self.MAIN_MENU_CURRENT_ROUND] = "Current round"
+
+        choice = cli.utils.prompt_menu(menu_items)
         return choice
 
     def prompt_round_menu(self, current_round: Round) -> int:
         menu_items = dict()
         menu_items[self.ROUND_MENU_BACK] = "Back"
 
-        for idx, match in enumerate(current_round.matches):
-            p1_data, p2_data = match
+        for idx, m in enumerate(current_round.matches):
+            p1_data, p2_data = m
             p1, p1_score = p1_data
             p2, p2_score = p2_data
 
-            menu_items[idx + self.ROUND_MENU_BACK + 1] = f"{p1.full_name} vs {p2.full_name}"
+            if p1 and p2:
+                menu_items[idx + self.ROUND_MENU_BACK + 1] = f"{p1.full_name} vs {p2.full_name}"
 
         if current_round.all_matches_completed():
-            self.ROUND_MENU_FINISH = len(current_round.matches) + 1 + self.ROUND_MENU_BACK
+            self.ROUND_MENU_FINISH = len(menu_items) + 1
             menu_items[self.ROUND_MENU_FINISH] = "Mark as finished (irreversible)"
 
         choice = cli.utils.prompt_menu(menu_items)
@@ -275,7 +313,7 @@ class TournamentEngine:
         return choice
 
     def display_rounds_list(self):
-        matches_per_round = len(self.tournament.competitors) // 2
+        matches_per_round = self.tournament.matches_per_round
         cli.tournaments.print_rounds(self.tournament.name, self.tournament.rounds, matches_per_round)
 
     def display_match_history(self):
@@ -318,7 +356,6 @@ class TournamentEngine:
 
         self.display_tournament_header()
         while True:
-            self.display_scoreboard()
             self.add_new_competitor()
 
     def launch(self) -> None:
@@ -342,7 +379,7 @@ class TournamentEngine:
         self.resume()
 
     def launch_next_round(self) -> None:
-        if self.tournament.has_max_rounds():
+        if self.tournament.is_over:
             return
 
         # Sort players by score, then by elo.
@@ -367,6 +404,15 @@ class TournamentEngine:
                     next_player = self.tournament.competitors[ida + 1]
                     fixtures.append((player_a, next_player))
                     busy_players.append(next_player)
+
+        # Check expected number of fixtures, regarding the number of competitors (odd number of competitors).
+        if len(fixtures) < self.tournament.matches_per_round:
+            busy_ids = {p.id for p in busy_players}
+            all_ids =  {p.id for p in self.tournament.competitors}
+            single_player_id = (all_ids - busy_ids).pop()
+            single_player = next((p for p in self.tournament.competitors if p.id == single_player_id))
+            fixtures.append((single_player, None))
+
 
         round_name = self.prompt_new_round()
         self.tournament.add_round(round_name, fixtures)
@@ -396,7 +442,7 @@ class TournamentEngine:
                 self.display_match_history()
             elif main_menu_item == self.MAIN_MENU_CURRENT_ROUND:
                 while True:
-                    # Round menu.
+                    # Current round menu.
                     self.display_round_infos(current_round)
                     round_menu_item = self.prompt_round_menu(current_round)
 
