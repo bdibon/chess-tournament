@@ -1,8 +1,6 @@
 """This is the top level package for chess-tournament."""
 
-from collections import namedtuple
-
-from chesstournament.views import utils, players, tournaments
+from chesstournament.views.cli import CLIView
 
 __app_name__ = "chesstournament"
 __version__ = "0.1.0"
@@ -22,5 +20,4 @@ ERRORS = {
     FILE_ERROR: "Config file error."
 }
 
-View = namedtuple('View', 'utils players tournaments')
-cli =View(utils, players, tournaments)
+view = CLIView()

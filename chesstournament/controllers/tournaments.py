@@ -6,7 +6,7 @@ from typing import List
 
 import typer
 
-from chesstournament import cli, __app_name__
+from chesstournament import view, __app_name__
 from chesstournament import config
 from chesstournament.models.database import TournamentsRegistry, DatabaseException
 from chesstournament.models.tournament import Tournament, TournamentException, TIME_FORMAT_TOURNAMENT
@@ -17,17 +17,16 @@ app = typer.Typer(add_completion=False)
 @app.command()
 def add():
     """Add a new tournament to the database."""
-    tournament_fields = cli.tournaments.prompt_new()
-
     try:
+        tournament_fields = view.prompt_for_new_tournament()
         tournament = Tournament(**tournament_fields)
 
         tournaments_manager = get_tournaments_registry()
         tournaments_manager.add(tournament)
-        cli.utils.print_success(f"\nTournament was created successfully.")
-        cli.tournaments.print_tournaments_overview([tournament])
+        view.print_success(f"\nTournament was created successfully.")
+        view.print_tournaments([tournament])
     except (TournamentException, DatabaseException) as error:
-        cli.utils.print_error(f'\nTournament was not created:\n{error.message}')
+        view.print_error(f'\nTournament was not created:\n{error.message}')
         raise typer.Exit(1)
 
 
@@ -43,18 +42,18 @@ def list_tournaments(
 
     Combining different sorting options has undefined behavior.
     """
-    sort_flag = TournamentSort.NONE
-    if sort_recent:
-        sort_flag |= TournamentSort.RECENT
-
-    tournament_registry = get_tournaments_registry()
-
     try:
+        sort_flag = TournamentSort.NONE
+        if sort_recent:
+            sort_flag |= TournamentSort.RECENT
+
+        tournament_registry = get_tournaments_registry()
         saved_tournaments = tournament_registry.get_all()
+
         sort_tournaments(saved_tournaments, sort_flag)
-        cli.tournaments.print_tournaments_overview(saved_tournaments)
+        view.print_tournaments(saved_tournaments)
     except (TournamentException, DatabaseException) as error:
-        cli.utils.print_error(f'\nCould not retrieve saved players:\n{error.message}')
+        view.print_error(f'\nCould not retrieve saved players:\n{error.message}')
         raise typer.Exit(1)
 
 
@@ -65,7 +64,7 @@ def get_tournaments_registry():
         tournaments_registry = TournamentsRegistry(str(db_path))
         return tournaments_registry
     except Exception:
-        cli.utils.print_error(f"Config file not found. Please, run '{__app_name__} init'.")
+        view.print_error(f"Config file not found. Please, run '{__app_name__} init'.")
         raise typer.Exit(1)
 
 

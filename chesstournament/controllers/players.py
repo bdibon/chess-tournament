@@ -1,12 +1,12 @@
 """This module defines the controller to manage players."""
 
 from enum import Flag, auto
-from typing import List
 from operator import attrgetter
+from typing import List
 
 import typer
 
-from chesstournament import cli, config, __app_name__
+from chesstournament import view, config, __app_name__
 from chesstournament.models.database import PlayersRegistry, DatabaseException
 from chesstournament.models.player import Player, PlayerException
 
@@ -17,16 +17,16 @@ app = typer.Typer(add_completion=False)
 def add():
     """Add a new player to the database."""
     try:
-        player_fields = cli.players.prompt_new()
-        player = Player(*player_fields)
+        player_fields = view.prompt_for_new_player()
+        player = Player(**player_fields)
 
         players_registry = get_players_registry()
         players_registry.add(player)
 
-        cli.utils.print_success(f"\nPlayer was created successfully.")
-        cli.players.print_list([player])
+        view.print_success(f"\nPlayer was created successfully.")
+        view.print_players([player])
     except (PlayerException, DatabaseException) as error:
-        cli.utils.print_error(f'\nPlayer was not created:\n{error.message}')
+        view.print_error(f'\nPlayer was not created:\n{error.message}')
         raise typer.Exit(1)
 
 
@@ -58,9 +58,9 @@ def list_players(
 
         saved_players = players_registry.get_all()
         sort_players(saved_players, sort_flag)
-        cli.players.print_list(saved_players)
+        view.print_players(saved_players)
     except (PlayerException, DatabaseException) as error:
-        cli.utils.print_error(f'\nCould not retrieve saved players:\n{error.message}')
+        view.print_error(f'\nCould not retrieve saved players:\n{error.message}')
         raise typer.Exit(1)
 
 
@@ -81,18 +81,18 @@ def update(
         player = players_registry.find(player_id)
 
         if player is None:
-            cli.utils.print_error("Player not found.")
+            view.print_error("Player not found.")
             raise typer.Exit(1)
 
         old_elo = player.elo
         player.elo = elo
         players_registry.update_one(player)
-        cli.utils.print_success(
+        view.print_success(
             f"\nPlayer with id {player_id} ({player.first_name} {player.last_name}) was successfully updated."
             f"\nHis/Her Elo rank went from {old_elo} to {player.elo}.")
-        cli.players.print_list([player])
+        view.print_players([player])
     except (PlayerException, DatabaseException) as error:
-        cli.utils.print_error(f'\nCould not update player with id: {player_id}:\n{error.message}')
+        view.print_error(f'\nCould not update player with id: {player_id}:\n{error.message}')
         raise typer.Exit(1)
 
 
@@ -103,7 +103,7 @@ def get_players_registry() -> PlayersRegistry:
         players_registry = PlayersRegistry(str(db_path))
         return players_registry
     except Exception:
-        cli.utils.print_error(f"Config file not found. Please, run '{__app_name__} init'.")
+        view.print_error(f"Config file not found. Please, run '{__app_name__} init'.")
         raise typer.Exit(1)
 
 

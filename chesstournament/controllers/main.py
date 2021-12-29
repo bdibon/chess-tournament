@@ -4,16 +4,18 @@ import itertools
 from operator import attrgetter
 from pathlib import Path
 from typing import Optional
-import math
 
 import typer
 
-from chesstournament import __app_name__, __version__, config, ERRORS
-from chesstournament import cli
+from chesstournament import __app_name__, __version__, config, ERRORS, view
 from chesstournament.controllers import players, tournaments
 from chesstournament.models.database import DEFAULT_DB_LOCATION, DatabaseException, create_database
 from chesstournament.models.player import PlayerException, TournamentPlayer
 from chesstournament.models.tournament import TournamentException, Round
+
+COMPETITOR_COLUMNS = (
+    "id", "first_name", "last_name", "elo", 'score'
+)
 
 app = typer.Typer(add_completion=False)
 app.add_typer(players.app, name='players', help='Manage players in the app.')
@@ -31,6 +33,7 @@ class TournamentEngineException(Exception):
         self.message = message
         super().__init__(self.message)
 
+
 class TournamentEngine:
     """This gathers the required functionality by the run tournament command."""
 
@@ -40,11 +43,11 @@ class TournamentEngine:
     COMPETITOR_MENU_LIST_PLAYERS = 3
     COMPETITOR_MENU_LAUNCH = 4
 
-    MAIN_MENU_HEADER= 1
+    MAIN_MENU_HEADER = 1
     MAIN_MENU_SCOREBOARD = 2
     MAIN_MENU_LIST_ROUNDS = 3
     MAIN_MENU_MATCH_HISTORY = 4
-    MAIN_MENU_CURRENT_ROUND= 5
+    MAIN_MENU_CURRENT_ROUND = 5
 
     ROUND_MENU_BACK = 1
     ROUND_MENU_FINISH = 99
@@ -81,13 +84,13 @@ class TournamentEngine:
         player_id = first_name = last_name = None
 
         if menu_item == self.COMPETITOR_MENU_ID:
-            player_id = cli.utils.prompt_value("Player's id", int)
+            player_id = view.prompt_value("Player's id", int)
             competitor_ids = [comp.id for comp in self.tournament.competitors]
             if player_id in competitor_ids:
                 raise TournamentEngineException(f"Player with id={player_id} is already in the list of competitors.")
         elif menu_item == self.COMPETITOR_MENU_NAME:
-            first_name = cli.utils.prompt_value("First name", str)
-            last_name = cli.utils.prompt_value("Last name", str)
+            first_name = view.prompt_value("First name", str)
+            last_name = view.prompt_value("Last name", str)
         elif menu_item == self.COMPETITOR_MENU_LIST_PLAYERS:
             self.display_scoreboard()
             return
@@ -106,6 +109,7 @@ class TournamentEngine:
         self.save_tournament()
 
     def prompt_new_competitor_menu(self) -> int:
+        """Get input for new competitor."""
         menu_items = {
             self.COMPETITOR_MENU_ID: "Add player by id",
             self.COMPETITOR_MENU_NAME: "Add player by name",
@@ -115,7 +119,7 @@ class TournamentEngine:
         if self.tournament.has_enough_competitors:
             menu_items[self.COMPETITOR_MENU_LAUNCH] = "Launch tournament (irreversible)"
 
-        choice = cli.utils.prompt_menu(menu_items)
+        choice = view.prompt_menu(menu_items)
         return choice
 
     def has_populated_rounds(self) -> bool:
@@ -158,6 +162,7 @@ class TournamentEngine:
         self.tournament.rounds = rounds
 
     def save_tournament(self):
+        """Persist current tournament's state."""
         self.tournament_registry.update_one(self.tournament)
 
     def update_match_outcome(self, match, outcome):
@@ -200,14 +205,14 @@ class TournamentEngine:
     def display_scoreboard(self):
         """Display competitors of the current tournament."""
         sorted_competitors = self.sort_competitors()
-        cli.tournaments.print_scoreboard(self.tournament.name, sorted_competitors)
+        view.print_tabular_data(COMPETITOR_COLUMNS, sorted_competitors, f"{self.tournament.name} - Scoreboard")
 
     def display_tournament_header(self):
         """Display basic info about the current tournament."""
-        cli.tournaments.print_tournament_header(self.tournament)
+        view.print_tournament_header(self.tournament)
 
         if self.tournament.is_over:
-            cli.utils.print_raw("\nThis tournament is over.\n")
+            view.print_raw("\nThis tournament is over.\n")
 
     def display_round_infos(self, current_round: Round):
         round_idx = self.tournament.rounds.index(current_round)
@@ -240,16 +245,17 @@ class TournamentEngine:
             matches.append(m_data)
 
         heading = f"{current_round.name} ({round_idx + 1}/{self.tournament.number_of_rounds})"
-        description = f"\nStarted at: {current_round.start_date}"\
+        description = f"\nStarted at: {current_round.start_date}" \
                       f"\nEnded at: {getattr(current_round, 'end_date', 'N/A')}\n"
 
-        cli.utils.print_tabular_data(header=('match #', 'player 1', 'player 2', 'outcome'), items=matches,
-                                     heading=heading, description=description)
+        view.print_tabular_data(header=('match #', 'player 1', 'player 2', 'outcome'), items=matches,
+                                heading=heading, description=description)
 
     def display_state(self):
         """Display the tournament current state."""
         # display tournament infos
         self.display_tournament_header()
+
         # display competitors
         self.display_scoreboard()
 
@@ -267,7 +273,7 @@ class TournamentEngine:
         if not self.tournament.is_over:
             menu_items[self.MAIN_MENU_CURRENT_ROUND] = "Current round"
 
-        choice = cli.utils.prompt_menu(menu_items)
+        choice = view.prompt_menu(menu_items)
         return choice
 
     def prompt_round_menu(self, current_round: Round) -> int:
@@ -286,7 +292,7 @@ class TournamentEngine:
             self.ROUND_MENU_FINISH = len(menu_items) + 1
             menu_items[self.ROUND_MENU_FINISH] = "Mark as finished (irreversible)"
 
-        choice = cli.utils.prompt_menu(menu_items)
+        choice = view.prompt_menu(menu_items)
         return choice
 
     @staticmethod
@@ -295,7 +301,7 @@ class TournamentEngine:
         p1, p1_score = p1_data
         p2, p2_score = p2_data
 
-        cli.tournaments.print_match(p1.full_name, p2.full_name, p1_score, p2_score)
+        view.print_match(p1.full_name, p2.full_name, p1_score, p2_score)
 
     def prompt_match_menu(self, match) -> int:
         menu_items = dict()
@@ -309,12 +315,12 @@ class TournamentEngine:
         menu_items[self.MATCH_MENU_P2_WINS] = f"{p2.full_name} wins"
         menu_items[self.MATCH_MENU_DRAW] = "Draw"
 
-        choice = cli.utils.prompt_menu(menu_items)
+        choice = view.prompt_menu(menu_items)
         return choice
 
     def display_rounds_list(self):
         matches_per_round = self.tournament.matches_per_round
-        cli.tournaments.print_rounds(self.tournament.name, self.tournament.rounds, matches_per_round)
+        view.print_rounds(self.tournament.name, self.tournament.rounds, matches_per_round)
 
     def display_match_history(self):
         match_history = []
@@ -343,11 +349,11 @@ class TournamentEngine:
                 match_history.append(dict(round_name=r.name, player_1=player1_info,
                                           player_2=player2_info, outcome=outcome))
 
-        cli.tournaments.print_match_history(self.MATCH_HISTORY_HEADER, match_history,
-                                            heading=f"{self.tournament.name} - Match History")
+        view.print_tabular_data(self.MATCH_HISTORY_HEADER, match_history,
+                                heading=f"{self.tournament.name} - Match History")
 
     def prompt_new_round(self):
-        round_name = cli.tournaments.prompt_new_round(self.tournament.name, len(self.tournament.rounds) + 1)
+        round_name = view.prompt_new_round(self.tournament.name, len(self.tournament.rounds) + 1)
         return round_name
 
     def prepare(self):
@@ -408,11 +414,10 @@ class TournamentEngine:
         # Check expected number of fixtures, regarding the number of competitors (odd number of competitors).
         if len(fixtures) < self.tournament.matches_per_round:
             busy_ids = {p.id for p in busy_players}
-            all_ids =  {p.id for p in self.tournament.competitors}
+            all_ids = {p.id for p in self.tournament.competitors}
             single_player_id = (all_ids - busy_ids).pop()
             single_player = next((p for p in self.tournament.competitors if p.id == single_player_id))
             fixtures.append((single_player, None))
-
 
         round_name = self.prompt_new_round()
         self.tournament.add_round(round_name, fixtures)
@@ -424,7 +429,6 @@ class TournamentEngine:
             self.populate_competitors()
         if not self.has_populated_rounds():
             self.populate_rounds()
-
 
         # Main menu.
         self.display_tournament_header()
@@ -470,8 +474,6 @@ class TournamentEngine:
                                 self.update_match_outcome(current_match, self.MATCH_MENU_DRAW)
 
 
-
-
 @app.command()
 def init(db_path: str = typer.Option(
     str(DEFAULT_DB_LOCATION),
@@ -481,15 +483,15 @@ def init(db_path: str = typer.Option(
     """Initialize chess tournament local storage."""
     app_init_error = config.init_app(db_path)
     if app_init_error:
-        cli.utils.print_error(f"Failed to create config file:\n'{ERRORS[app_init_error]}'")
+        view.print_error(f"Failed to create config file:\n'{ERRORS[app_init_error]}'")
         raise typer.Exit(1)
 
     db_init_error = create_database(Path(db_path))
     if db_init_error:
-        cli.utils.print_error(f"Failed to create database file:\n'{ERRORS[db_init_error]}'", )
+        view.print_error(f"Failed to create database file:\n'{ERRORS[db_init_error]}'", )
         raise typer.Exit(1)
     else:
-        cli.utils.print_success(f"Succeed to create local storage file:\n'{db_path}'")
+        view.print_success(f"Succeed to create local storage file:\n'{db_path}'")
 
 
 @app.command()
@@ -511,13 +513,13 @@ def run(tournament_id: int = typer.Option(
             tournament_engine.prepare()
 
     except (TournamentException, PlayerException, DatabaseException, TournamentEngineException) as error:
-        cli.utils.print_error(f"\nTournament execution failed:\n{error.message}")
+        view.print_error(f"\nTournament execution failed:\n{error.message}")
         raise typer.Exit(1)
 
 
 def version_callback(value: bool):
     if value:
-        cli.utils.print_raw(f"{__app_name__} version: {__version__}")
+        view.print_raw(f"{__app_name__} version: {__version__}")
         raise typer.Exit()
     return None
 
