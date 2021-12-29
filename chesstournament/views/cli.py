@@ -21,8 +21,8 @@ class CLIView:
     def print_raw(self, message: str) -> None:
         self.utils_view.print_raw(message)
 
-    def print_tabular_data(self, header: tuple, items: list, heading: str = None) -> None:
-        self.utils_view.print_tabular_data(header, items, heading)
+    def print_tabular_data(self, header: tuple, items: list, heading: str = None, description: str = None) -> None:
+        self.utils_view.print_tabular_data(header, items, heading, description)
 
     def prompt_value(self, description: str, expected_type: type = None, default_value: str = None) -> any:
         return self.utils_view.prompt_value(description, expected_type, default_value)
