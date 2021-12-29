@@ -64,7 +64,7 @@ class TournamentEngine:
 
     def has_populated_competitors(self) -> bool:
         """Checks whether it should populate competitors or not."""
-        return self.tournament.has_competitors() and isinstance(self.tournament.competitors[0], TournamentPlayer)
+        return self.tournament.has_competitors and isinstance(self.tournament.competitors[0], TournamentPlayer)
 
     def populate_competitors(self) -> None:
         """Populate competitors with data from the players table."""
@@ -112,7 +112,7 @@ class TournamentEngine:
             self.COMPETITOR_MENU_LIST_PLAYERS: "List registered players"
         }
 
-        if self.tournament.has_enough_competitors():
+        if self.tournament.has_enough_competitors:
             menu_items[self.COMPETITOR_MENU_LAUNCH] = "Launch tournament (irreversible)"
 
         choice = cli.utils.prompt_menu(menu_items)
@@ -120,7 +120,7 @@ class TournamentEngine:
 
     def has_populated_rounds(self) -> bool:
         """Checks whether it should populate rounds or not."""
-        if not self.tournament.has_started():
+        if not self.tournament.has_started:
             return True
 
         first_round = self.tournament.rounds[0]
@@ -282,7 +282,7 @@ class TournamentEngine:
             if p1 and p2:
                 menu_items[idx + self.ROUND_MENU_BACK + 1] = f"{p1.full_name} vs {p2.full_name}"
 
-        if current_round.all_matches_completed():
+        if current_round.all_matches_completed:
             self.ROUND_MENU_FINISH = len(menu_items) + 1
             menu_items[self.ROUND_MENU_FINISH] = "Mark as finished (irreversible)"
 
@@ -351,7 +351,7 @@ class TournamentEngine:
         return round_name
 
     def prepare(self):
-        if self.tournament.has_competitors():
+        if self.tournament.has_competitors:
             self.populate_competitors()
 
         self.display_tournament_header()
@@ -505,7 +505,7 @@ def run(tournament_id: int = typer.Option(
         tournament = tournament_registry.get_by_id(tournament_id)
         tournament_engine = TournamentEngine(tournament, players_registry, tournament_registry)
 
-        if tournament.has_started():
+        if tournament.has_started:
             tournament_engine.resume()
         else:
             tournament_engine.prepare()

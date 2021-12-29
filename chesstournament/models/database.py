@@ -6,7 +6,7 @@ from typing import List
 from tinydb import TinyDB, where
 
 from chesstournament import DB_READ_ERROR, DB_WRITE_ERROR, SUCCESS, ERRORS
-from chesstournament.models.player import Player, TournamentPlayer
+from chesstournament.models.player import Player
 from chesstournament.models.tournament import Tournament
 
 DEFAULT_DB_LOCATION = Path.home() / '.chess_tournament.json'
@@ -70,7 +70,7 @@ class PlayersRegistry:
                     players = [p for p in players if p['first_name'] == first_name.capitalize()]
                     player = players[0] if len(players) else None
                     return None if player is None else Player(**player, id=player.doc_id)
-        except Exception as err:
+        except Exception:
             raise DatabaseException(DB_READ_ERROR)
 
     def update_one(self, player: Player) -> int:

@@ -16,9 +16,8 @@ app = typer.Typer(add_completion=False)
 @app.command()
 def add():
     """Add a new player to the database."""
-    player_fields = cli.players.prompt_new()
-
     try:
+        player_fields = cli.players.prompt_new()
         player = Player(*player_fields)
 
         players_registry = get_players_registry()
@@ -54,9 +53,9 @@ def list_players(
     if sort_elo:
         sort_flag |= PlayerSort.ELO
 
-    players_registry = get_players_registry()
-
     try:
+        players_registry = get_players_registry()
+
         saved_players = players_registry.get_all()
         sort_players(saved_players, sort_flag)
         cli.players.print_list(saved_players)
@@ -77,9 +76,8 @@ def update(
             help="The new Elo rating of the player."
         )):
     """Update a player in the local database."""
-    players_registry = get_players_registry()
-
     try:
+        players_registry = get_players_registry()
         player = players_registry.find(player_id)
 
         if player is None:

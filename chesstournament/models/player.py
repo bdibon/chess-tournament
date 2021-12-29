@@ -21,6 +21,8 @@ class PlayerException(Exception):
 
 
 class Player(Mapping):
+    """This models a chess player."""
+
     def __init__(self,
                  first_name: str,
                  last_name: str,
@@ -112,6 +114,8 @@ class Player(Mapping):
 
 
 class TournamentPlayer(Player):
+    """This models a chess player in the context of a specific tournament."""
+
     def __init__(self,
                  id: int,
                  first_name: str,
@@ -135,6 +139,29 @@ class TournamentPlayer(Player):
                f"({self._first_name}, {self._last_name}, {str(self._birth_date)}, {self._sex}, {self._elo}," \
                f" {self._score}, {self._previous_opponents})"
 
+    def add_opponent(self, new_opponent):
+        """Add another player to the list of opponents this player has already faced."""
+        if not isinstance(new_opponent, TournamentPlayer):
+            raise PlayerException('A TournamentPlayer opponents must be another TournamentPlayer.')
+
+        self._previous_opponents.append(new_opponent.id)
+
+    def has_faced(self, other_player):
+        """Checks if this player has faced the other_player."""
+        return other_player.id in self._previous_opponents
+
+    def wins(self):
+        """Updates player's state after winning."""
+        self._score += 1
+
+    def draws(self):
+        """Updates player's state after a draw."""
+        self._score += 0.5
+
+    def serialize(self):
+        """Returns a lean version dictionary of the instance."""
+        return {'id': self.id, 'score': self.score, 'elo': self._elo, 'previous_opponents': self.previous_opponents}
+
     @property
     def score(self):
         return self._score
@@ -145,12 +172,6 @@ class TournamentPlayer(Player):
             self._score = value
         else:
             raise PlayerException(f"Invalid player's score: {value}.")
-
-    def wins(self):
-        self._score += 1
-
-    def draws(self):
-        self._score += 0.5
 
     @property
     def previous_opponents(self):
@@ -166,19 +187,6 @@ class TournamentPlayer(Player):
     @property
     def last_opponent(self) -> id:
         return self._previous_opponents[-1] if len(self._previous_opponents) else None
-
-    def add_opponent(self, new_opponent):
-        if not isinstance(new_opponent, TournamentPlayer):
-            raise PlayerException('A TournamentPlayer opponents must be another TournamentPlayer.')
-
-        self._previous_opponents.append(new_opponent.id)
-
-    def has_faced(self, other_player):
-        return other_player.id in self._previous_opponents
-
-    def serialize(self):
-        """Returns a lean version dictionary of the instance."""
-        return {'id': self.id, 'score': self.score, 'elo': self._elo, 'previous_opponents': self.previous_opponents}
 
     @classmethod
     def from_player(cls, player: Player):
