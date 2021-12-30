@@ -77,7 +77,7 @@ Once you have enough players in your local storage to start a tournament (by def
 
 ## Run a tournament
 
-This is what the app is made for! Once you have created your tournament you can run it interactively with the `run` command.
+This is what the app is made for! Once you have created your tournament you can run it interactively with the `run` command, note you have to provide the tournament's id with the `-t` flag.
 
 ```
 python -m chesstournament run -t 1
