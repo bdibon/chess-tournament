@@ -4,6 +4,7 @@ import click
 import typer
 from tabulate import tabulate
 
+
 class UtilityCLIView:
     @staticmethod
     def print_success(message: str):
@@ -21,7 +22,7 @@ class UtilityCLIView:
         typer.echo(message)
 
     @staticmethod
-    def prompt_value(description: str, expected_type: type = None, default_value: str=None) -> any:
+    def prompt_value(description: str, expected_type: type = None, default_value: str = None) -> any:
         return typer.prompt(f"\n{description}", type=expected_type, default=default_value)
 
     @staticmethod
@@ -43,7 +44,7 @@ class UtilityCLIView:
         return int(choice) if type(list(menu_items.keys())[0]) == int else choice
 
     @staticmethod
-    def print_tabular_data(header: tuple, items: list, heading: str = None, description: str=None):
+    def print_tabular_data(header: tuple, items: list, heading: str = None, description: str = None):
         """Print tabular item's data with its associated header, eventually with a heading."""
         table = []
         for item in items:
@@ -60,9 +61,3 @@ class UtilityCLIView:
             content += description
 
         typer.echo(content)
-
-
-
-
-
-

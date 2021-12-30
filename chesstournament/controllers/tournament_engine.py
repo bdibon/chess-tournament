@@ -39,6 +39,7 @@ ROUND_MENU_BACK = 1
     MATCH_MENU_DRAW
 ) = range(1, 5)
 
+
 class TournamentEngineException(Exception):
     """The TournamentEngine class raises this when it is misused."""
 

@@ -23,7 +23,7 @@ def add():
         players_registry = get_players_registry()
         players_registry.add(player)
 
-        view.print_success(f"\nPlayer was created successfully.")
+        view.print_success("\nPlayer was created successfully.")
         view.print_players([player])
     except (PlayerException, DatabaseException) as error:
         view.print_error(f'\nPlayer was not created:\n{error.message}')

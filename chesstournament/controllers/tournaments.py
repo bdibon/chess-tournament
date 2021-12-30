@@ -23,7 +23,7 @@ def add():
 
         tournaments_manager = get_tournaments_registry()
         tournaments_manager.add(tournament)
-        view.print_success(f"\nTournament was created successfully.")
+        view.print_success("\nTournament was created successfully.")
         view.print_tournaments([tournament])
     except (TournamentException, DatabaseException) as error:
         view.print_error(f'\nTournament was not created:\n{error.message}')

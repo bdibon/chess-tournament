@@ -1,6 +1,5 @@
 """This is the main controller of chesstournament."""
 
-
 from pathlib import Path
 from typing import Optional
 
@@ -13,7 +12,6 @@ from chesstournament.models.database import DEFAULT_DB_LOCATION, DatabaseExcepti
 from chesstournament.models.player import PlayerException
 from chesstournament.models.tournament import TournamentException
 
-
 app = typer.Typer(add_completion=False)
 app.add_typer(players.app, name='players', help='Manage players in the app.')
 app.add_typer(tournaments.app, name='tournaments', help='Manage tournaments in the app')
@@ -21,10 +19,10 @@ app.add_typer(tournaments.app, name='tournaments', help='Manage tournaments in t
 
 @app.command()
 def init(db_path: str = typer.Option(
-    str(DEFAULT_DB_LOCATION),
-    "--db-path",
-    "-db",
-    prompt="chesstournament database location?")):
+        str(DEFAULT_DB_LOCATION),
+        "--db-path",
+        "-db",
+        prompt="chesstournament database location?")):
     """Initialize chess tournament local storage."""
     app_init_error = config.init_app(db_path)
     if app_init_error:
@@ -41,10 +39,10 @@ def init(db_path: str = typer.Option(
 
 @app.command()
 def run(tournament_id: int = typer.Option(
-    ...,
-    "--tournament",
-    "-t",
-    help="A tournament id.")):
+        ...,
+        "--tournament",
+        "-t",
+        help="A tournament id.")):
     """Run an existing tournament interactively."""
     try:
         tournament_registry = tournaments.get_tournaments_registry()
