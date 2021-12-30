@@ -117,6 +117,10 @@ class Round(Mapping):
                 return False
         return True
 
+    @property
+    def is_finished(self) -> bool:
+        return bool(self.end_date)
+
 
 class Tournament(Mapping):
     def __init__(self,
@@ -260,7 +264,7 @@ class Tournament(Mapping):
         return self._rounds[1] if len(self._rounds) >= 1 else None
 
     @property
-    def last_round(self):
+    def last_round(self) -> Round:
         return self._rounds[-1] if len(self._rounds) >= 1 else None
 
     @property
@@ -281,7 +285,9 @@ class Tournament(Mapping):
 
     @property
     def is_over(self):
-        return len(self._rounds) >= self._number_of_rounds
+        if len(self._rounds) < self._number_of_rounds:
+            return False
+        return self.last_round.is_finished
 
     @property
     def start_date(self):

@@ -58,4 +58,5 @@ class CLIView:
     def prompt_new_round(self, tournament_name: str, round_number: int) -> str:
         self.print_raw(f"[ {tournament_name} - New round ]")
         round_name = self.prompt_value(ROUND_NAME_PROMPT, str, f"Round {round_number}")
+        self.print_raw()
         return round_name
