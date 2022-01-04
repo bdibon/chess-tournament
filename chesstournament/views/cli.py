@@ -18,7 +18,7 @@ class CLIView:
     def print_error(self, message: str) -> None:
         self.utils_view.print_error(message)
 
-    def print_raw(self, message: str) -> None:
+    def print_raw(self, message: str = "") -> None:
         self.utils_view.print_raw(message)
 
     def print_tabular_data(self, header: tuple, items: list, heading: str = None, description: str = None) -> None:

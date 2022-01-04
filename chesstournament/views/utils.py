@@ -17,7 +17,7 @@ class UtilityCLIView:
         typer.secho(message, fg=typer.colors.RED, err=True)
 
     @staticmethod
-    def print_raw(message: str):
+    def print_raw(message: str = ""):
         """Prints a raw text message on stdout."""
         typer.echo(message)
 
